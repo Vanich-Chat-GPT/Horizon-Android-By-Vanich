@@ -39,8 +39,13 @@ jobs:
           toolchain: '1.95.0'
           targets: aarch64-linux-android
           components: clippy
-      - name: Setup Android SDK and NDK
-        uses: android-actions/setup-android@v3
+      - name: Setup preinstalled Android SDK and accept licenses
+        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
       - name: Install required Android components
         run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
       - name: Setup Gradle 8.14
