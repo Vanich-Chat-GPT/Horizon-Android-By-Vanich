@@ -39,3 +39,4 @@ jobs:
           grep -q 'snap_to_grid' crates/horizon-client/src/touch/editor.rs
           grep -q 'settings.prioritize_chunk_updates = 1' crates/horizon-client/src/android/launcher_pages.rs
           grep -q 'settings.chunk_fade = if fancy' crates/horizon-client/src/android/launcher_pages.rs
+          grep -q 'received.take(48)' crates/horizon-client/src/streaming.rs
