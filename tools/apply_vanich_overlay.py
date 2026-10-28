@@ -18,7 +18,7 @@ def patch(path, old, new):
 
 # Actual native Android render surface scale (not a mock UI slider).
 display = "crates/horizon-client/src/android/display.rs"
-patch(display, "[100, 85, 75, 67, 50, 25]", "[100, 90, 85, 75, 67, 60, 50, 40]")
+patch(display, "pub const PRESETS: [u32; 6] = [100, 85, 75, 67, 50, 25];", "pub const PRESETS: [u32; 8] = [100, 90, 85, 75, 67, 60, 50, 40];")
 patch(display, "Self(percent.clamp(25, 100))", "Self(percent.clamp(40, 100))")
 patch(display, "Enter a whole percentage from 25 to 100", "Enter a whole percentage from 40 to 100")
 patch(display, "if !(25..=100).contains(&percent)", "if !(40..=100).contains(&percent)")
