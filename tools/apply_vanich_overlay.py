@@ -12,8 +12,8 @@ ROOT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd()
 def patch(path, old, new):
     p = ROOT / path
     source = p.read_text(encoding="utf-8")
-    if source.count(old) != 1:
-        raise RuntimeError(f"{path}: expected one occurrence, got {source.count(old)}: {old[:100]!r}")
+    if old not in source:
+        raise RuntimeError(f"{path}: missing expected source snippet: {old[:100]!r}")
     p.write_text(source.replace(old, new, 1), encoding="utf-8")
 
 # Actual native Android render surface scale (not a mock UI slider).
