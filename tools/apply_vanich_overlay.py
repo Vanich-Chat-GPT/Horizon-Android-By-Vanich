@@ -478,4 +478,17 @@ for en, ru in (
     patch(catalog, '        "On" => "Вкл.",',
           f'        "{en}" => "{ru}",\n        "On" => "Вкл.",')
 
+
+# Install RU game-menu defaults on a fresh game profile, but never overwrite
+# options.txt (and the player's language choice) on an existing installation.
+patch("crates/horizon-client/src/android/launcher.rs",
+      '        if horizon_client::official_install::ready(&self.home) {',
+      '''        if horizon_client::official_install::ready(&self.home) {
+            let options_path = self.catalog.config.game_home(&self.home).join("options.txt");
+            if !options_path.exists() {
+                let mut initial = horizon_client::settings::Settings::load(&options_path);
+                initial.language = if self.catalog.config.russian { "ru_ru" } else { "en_us" }.into();
+                initial.save(&options_path);
+            }''')
+
 print("Horizon Android overlay applied successfully.")
