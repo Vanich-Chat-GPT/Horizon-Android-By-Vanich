@@ -1,0 +1,92 @@
+name: Touch and FPS prototype APK (no release)
+
+on:
+  push:
+    branches: [feature/touch-editor-chunk-stability]
+    paths:
+      - 'tools/apply_touch_performance.py'
+      - '.github/workflows/touch-performance-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-arm64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout project customizations
+        uses: actions/checkout@v4
+        with:
+          path: overlay
+          persist-credentials: false
+      - name: Checkout upstream Horizon Android (GPL-3.0)
+        uses: actions/checkout@v4
+        with:
+          repository: Vasysik/horizon-android
+          ref: android
+          path: upstream
+          persist-credentials: false
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Rust 1.95.0 and ARM64 Android target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          targets: aarch64-linux-android
+          components: clippy
+      - name: Setup preinstalled Android SDK and accept licenses
+        shell: bash
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+      - name: Install required Android components
+        run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Setup Gradle 8.14
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14'
+      - name: Apply actual native launcher changes
+        run: |
+          python3 overlay/tools/apply_vanich_overlay.py upstream
+          python3 overlay/tools/apply_touch_performance.py upstream
+      - name: Validate patched sources
+        run: |
+          python3 -m py_compile overlay/tools/apply_vanich_overlay.py
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse('upstream/packaging/android/res/values/styles.xml')
+          PY
+          cd upstream
+          cargo fmt --all
+          git diff --check
+      - name: Prepare official engine metadata
+        working-directory: upstream
+        run: python3 tools/android_prepare.py
+      - name: Build Android ARM64 public-mode TEST APK
+        working-directory: upstream
+        run: python3 tools/android_build.py --abi arm64-v8a --public --profile fast --gradle "$(command -v gradle)" --java-home "$JAVA_HOME"
+      - name: Verify ARM64 APK integrity
+        run: |
+          python3 - <<'PY'
+          import zipfile, pathlib
+          p=pathlib.Path('upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk')
+          with zipfile.ZipFile(p) as a:
+              assert a.testzip() is None
+              so=[s for s in a.namelist() if s.startswith('lib/') and s.endswith('.so')]
+              assert so and all(s.startswith('lib/arm64-v8a/') for s in so), so
+          print('ARM64 archive integrity passed:',p,p.stat().st_size,'bytes')
+          PY
+      - name: Upload TEST artifact only; do not publish release
+        uses: actions/upload-artifact@v4
+        with:
+          name: Horizon-Android-By-Vanich-Touch-FPS-TEST-arm64
+          path: upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk
+          if-no-files-found: error
+          retention-days: 7
