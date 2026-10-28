@@ -52,11 +52,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14'
-      - name: Apply actual native launcher changes
-        run: python3 overlay/tools/apply_vanich_overlay.py upstream
+      - name: Apply native launcher, touch customization and performance patches
+        run: |
+          python3 overlay/tools/apply_vanich_overlay.py upstream
+          python3 overlay/tools/apply_touch_performance.py upstream
       - name: Validate patched sources
         run: |
-          python3 -m py_compile overlay/tools/apply_vanich_overlay.py
+          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           ET.parse('upstream/packaging/android/res/values/styles.xml')
