@@ -425,4 +425,57 @@ res = ROOT / "packaging/android/res"
 </vector>
 """, encoding="utf-8")
 
+
+# Localize native account screen labels, without altering authentication
+# protocol messages or account/token handling.
+login = "crates/horizon-client/src/android/login.rs"
+patch(login, 'use super::pages::{Action, button};',
+      'use super::pages::{Action, button};\nuse crate::catalog::tr;')
+patch(login, 'format!("Signed in: {name}")',
+      'format!("{}: {name}", tr("Signed in"))')
+patch(login, 'format!("Sign in required: {name}")',
+      'format!("{}: {name}", tr("Sign in required"))')
+patch(login, '"Signing in...".into()', 'tr("Signing in...").into()')
+patch(login, 'format!("Offline: {offline_name}")',
+      'format!("{}: {offline_name}", tr("Offline"))')
+patch(login, '"Offline / Sign in".into()', 'tr("Offline / Sign in").into()')
+for text in (
+    "Offline player name",
+    "Used when signed out of Microsoft.",
+    "Accounts",
+    "Account saved securely. Sessions renew automatically.",
+    "Your password is entered in Microsoft's browser.",
+    "Requesting a sign-in code...",
+):
+    patch(login, f'"{text}"', f'tr("{text}")')
+patch(login, '"Offline player name"', 'tr("Offline player name")')
+for en, ru in (
+    ("Signed in", "Выполнен вход"),
+    ("Sign in required", "Требуется вход"),
+    ("Signing in...", "Выполняется вход..."),
+    ("Offline", "Офлайн"),
+    ("Offline / Sign in", "Офлайн / Войти"),
+    ("Offline player name", "Имя игрока офлайн"),
+    ("Used when signed out of Microsoft.", "Используется без аккаунта Microsoft."),
+    ("Accounts", "Аккаунты"),
+    ("Account saved securely. Sessions renew automatically.", "Аккаунт сохранён. Вход обновляется автоматически."),
+    ("Your password is entered in Microsoft's browser.", "Пароль вводится только в браузере Microsoft."),
+    ("Requesting a sign-in code...", "Запрос кода входа..."),
+    ("Done", "Готово"),
+    ("Copy code", "Копировать код"),
+    ("Enter an offline name", "Введите имя игрока"),
+    ("Request Minecraft API approval", "Запросить доступ Minecraft API"),
+    ("Copy code and open browser", "Копировать код и открыть браузер"),
+    ("Restart browser sign-in", "Повторить вход через браузер"),
+    ("Switch Microsoft account", "Сменить аккаунт Microsoft"),
+    ("Sign in with browser", "Войти через браузер"),
+    ("Use a device code instead", "Войти через код устройства"),
+    ("Cancel sign-in", "Отменить вход"),
+    ("Sign out", "Выйти"),
+    ("Close", "Закрыть"),
+    ("Back (sign-in continues)", "Назад (вход продолжается)"),
+):
+    patch(catalog, '        "On" => "Вкл.",',
+          f'        "{en}" => "{ru}",\n        "On" => "Вкл.",')
+
 print("Horizon Android overlay applied successfully.")
