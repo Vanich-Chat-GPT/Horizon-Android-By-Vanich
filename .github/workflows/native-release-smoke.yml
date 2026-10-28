@@ -1,0 +1,32 @@
+name: Native Java Android release patch smoke
+on:
+  push:
+    branches: [feature/native-java-android-release]
+    paths: ['tools/apply_release_polish.py', '.github/workflows/native-release-smoke.yml']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: overlay
+      - uses: actions/checkout@v4
+        with:
+          repository: Vasysik/horizon-android
+          ref: android
+          path: upstream
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+      - name: Apply and format
+        run: |
+          python3 overlay/tools/apply_vanich_overlay.py upstream
+          python3 overlay/tools/apply_touch_performance.py upstream
+          python3 overlay/tools/apply_release_polish.py upstream
+          cd upstream
+          cargo fmt --all
+          git diff --check
+          grep -q 'self.pad.touch.open_editor()' crates/horizon-client/src/game.rs
+          grep -q 'Minecraft Java on Android Native' crates/horizon-client/src/android/launcher_pages.rs

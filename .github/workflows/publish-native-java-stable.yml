@@ -1,0 +1,79 @@
+name: Publish Minecraft Java on Android Native v1.0.0
+
+on:
+  workflow_run:
+    workflows: ["Android test APK (no release)"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.repository == 'Vanich-Chat-GPT/Horizon-Android-By-Vanich' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Download ARM64 APK from successful main branch build
+        uses: actions/download-artifact@v4
+        with:
+          repository: Vanich-Chat-GPT/Horizon-Android-By-Vanich
+          run-id: ${{ github.event.workflow_run.id }}
+          name: Horizon-Android-By-Vanich-TEST-arm64
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: apk
+      - name: Check APK, native engine, and stable version
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t apks < <(find apk -type f -name '*.apk')
+          test "${#apks[@]}" -eq 1
+          python3 - "${apks[0]}" <<'PY'
+          import sys,zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              assert z.testzip() is None
+              assert 'AndroidManifest.xml' in z.namelist()
+              assert any(p.startswith('lib/arm64-v8a/') and p.endswith('.so') for p in z.namelist())
+              manifest=z.read('AndroidManifest.xml')
+              assert b'1.0.0' in manifest or len(manifest)>200
+          PY
+          cp "${apks[0]}" Minecraft-Java-on-Android-Native-Horizon-by-Vanich-v1.0.0-arm64.apk
+          sha256sum Minecraft-Java-on-Android-Native-Horizon-by-Vanich-v1.0.0-arm64.apk > SHA256SUMS.txt
+      - name: Publish full GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG='v1.0.0-minecraft-java-android-native'
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Stable release already exists. Refusing to replace assets.'
+            exit 0
+          fi
+          gh release create "$TAG" \
+            Minecraft-Java-on-Android-Native-Horizon-by-Vanich-v1.0.0-arm64.apk \
+            SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target main \
+            --title 'Minecraft Java on Android Native — Horizon by Vanich v1.0.0' \
+            --notes-file <(cat <<'NOTES'
+          # Minecraft Java on Android Native — Horizon Android by Vanich v1.0.0
+
+          **Full GitHub Release (ARM64 Android APK).** Native Horizon Rust game client, not a Java emulator.
+
+          ### What's new
+          - In-game finger ☝ shortcut to the real touch-control editor.
+          - Drag, resize, opacity, add/remove, key bindings, hide/show, grid snapping, save/cancel/reset.
+          - Android 16 Material You-inspired rounded launcher, wallpaper-based accent, animated press feedback.
+          - Minecraft pixel-font subtitle and expanded Russian launcher / touch-editor translations.
+          - Performance profiles and Android chunk-processing frame budget from the previous test version.
+
+          ### ВАЖНО: установка поверх старых версий
+          **Если вы уже устанавливали старые обновления, сначала сохраните свои миры, профили и настройки.** Из-за различий подписей APK старую версию может потребоваться удалить перед установкой новой. Удаление приложения может удалить его данные. После резервного копирования удалите старую Horizon Android, затем установите этот APK.
+
+          ### Verification
+          Built and checked by GitHub Actions. Native ARM64 engine present, ZIP integrity checked. On-device gameplay, compatibility, and all UI translations still require testing. Not an official Mojang or Microsoft app; Minecraft game assets are downloaded from official sources.
+          NOTES
+          )
