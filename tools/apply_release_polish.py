@@ -237,4 +237,8 @@ for path in (pages,"crates/horizon-client/src/android/chooser.rs"):
             src=src.replace(old,'tr("'+en+'")')
     p.write_text(src,encoding="utf-8")
 
+# Version identifiers distinguish this stable candidate from upstream 0.7.3.
+patch("packaging/android/build.gradle", "versionCode 24", "versionCode 25")
+patch("packaging/android/build.gradle", "versionName '0.7.3'", "versionName '1.0.0'")
+
 print("Release polish: native finger shortcut, editor localization, search heading, animated Material press feedback.")
