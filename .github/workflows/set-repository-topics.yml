@@ -1,0 +1,37 @@
+name: Set repository discoverability topics
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/set-repository-topics.yml'
+permissions:
+  contents: write
+jobs:
+  topics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update GitHub repository topics
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/topics" \
+            -H "Accept: application/vnd.github+json" \
+            -f 'names[]=minecraft' \
+            -f 'names[]=minecraft-java' \
+            -f 'names[]=minecraft-java-edition' \
+            -f 'names[]=minecraft-android' \
+            -f 'names[]=minecraft-launcher' \
+            -f 'names[]=android' \
+            -f 'names[]=android-16' \
+            -f 'names[]=arm64' \
+            -f 'names[]=native-android' \
+            -f 'names[]=rust' \
+            -f 'names[]=vulkan' \
+            -f 'names[]=wgpu' \
+            -f 'names[]=material-you' \
+            -f 'names[]=touch-controls' \
+            -f 'names[]=gaming' \
+            -f 'names[]=open-source' \
+            -f 'names[]=horizon-android' \
+            -f 'names[]=minecraft-client'
+          gh api "repos/${GITHUB_REPOSITORY}/topics" --jq '.names | join(", ")'
