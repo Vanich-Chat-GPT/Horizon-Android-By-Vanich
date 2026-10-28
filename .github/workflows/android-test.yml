@@ -1,6 +1,11 @@
 name: Android test APK (no release)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/**'
+      - '.github/workflows/android-test.yml'
   workflow_dispatch:
 
 permissions:
