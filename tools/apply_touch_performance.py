@@ -132,8 +132,7 @@ replace(pages,
                 ),
                 (tr("Graphics preset"), tr(c.quality_preset.label()).into(), Action::GraphicsPreset),''')
 replace(pages, "    GraphicsPreset,\n", "    GraphicsPreset,\n    ShowTouchHelp,\n")
-replace(pages, "10.0 * row_height", "11.0 * row_height")
-replace(pages, "10.0 * row_height", "11.0 * row_height")
+replace(pages, "10.0 * row_height", "11.0 * row_height", expected=2)
 replace(pages,
         '''            Some(Action::GraphicsPreset) => {''',
         '''            Some(Action::ShowTouchHelp) => {
