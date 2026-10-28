@@ -1,3 +1,11 @@
+> **📌 ЗАКРЕПЛЕНО / PINNED — Minecraft Java on Android Native v1.0.0**
+>
+> **[Скачать полный релиз APK (Android ARM64)](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.0.0-minecraft-java-android-native)**
+>
+> Если уже установлена старая версия, **сначала сделайте резервную копию миров и настроек**. Из-за различий подписи может потребоваться удалить старую версию перед установкой новой.
+
+---
+
 # Minecraft Java on Android Native — Horizon Android by Vanich
 
 **Minecraft Java Edition on Android ARM64 — native Rust/Vulkan client.**
