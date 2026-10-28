@@ -27,3 +27,13 @@ Native Android ARM64 Minecraft Rust client development, based on the Horizon Rus
 Static source patch and formatting tests are separate from **on-device gameplay testing**. A CI success confirms compilation and APK structure; it does not by itself establish stable FPS, device driver compatibility, Cyrillic glyph coverage across every UI screen, or correctness of multiplayer on all Android 16 devices. More device testing is required.
 
 For game controls and launcher internals, follow upstream's `docs/android.md`. ARM64 Android 16 is the primary target; lower Android versions are not the primary compatibility target. Existing Horizon licensing applies. Only the repository owner authorizes any final release.
+
+## Touch customization and smooth chunk-loading test
+
+The Android build now applies `tools/apply_touch_performance.py` after the launcher overlay. This extends the **real in-game** touch editor: drag a control with a finger, select **Size** or **Opacity**, drag the slider, choose **Apply to all** when desired, optionally toggle **Grid 2.5%**, and press **Done**. **Cancel** restores the original layout. Settings are stored in `horizon-touch.json` per game profile. Original custom buttons remain supported; controls can be enlarged up to the updated supported bounds.
+
+Launcher Settings includes **Touch customization** as an entry-point hint, and **Graphics preset** adjusts actual Minecraft options. The Economy / Balanced / Quality presets select render scale 50% / 67% / 90%, render distance 5 / 8 / 12 chunks, simulation distance 5 / 6 / 8 chunks, and limit some expensive video effects. The Balanced mode uses a 90 FPS *cap*, not a performance guarantee.
+
+**Engine-level Android-specific frame pacing:** chunk streaming intake is bounded to 48 worker completions per update, rather than draining an arbitrarily large result queue in one frame. Jobs stay queued safely until a later update; this can improve frame-time stability at the cost of slower display of very distant chunks under heavy generation. Desktop keeps its original path. This is a targeted stutter mitigation, not a measured FPS result. Validate with real-world frame-time traces and memory measurements.
+
+No new GitHub Release is created automatically by this development overlay; APK builds are uploaded as temporary Actions artifacts for review first.
