@@ -1,0 +1,45 @@
+name: Android UI patch smoke test
+
+on:
+  push:
+    branches: [feature/material-you-cyrillic]
+    paths:
+      - 'tools/**'
+      - '.github/workflows/overlay-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  patch-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: overlay
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: Vasysik/horizon-android
+          ref: android
+          path: upstream
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+          components: rustfmt
+      - name: Apply source overlay
+        run: python3 overlay/tools/apply_vanich_overlay.py upstream
+      - name: Check Rust and Python source syntax
+        run: |
+          python3 -m py_compile overlay/tools/apply_vanich_overlay.py
+          cd upstream
+          cargo fmt --all
+          git diff --check
+      - name: Check Material You and Cyrillic integration
+        run: |
+          grep -q "system_material_accent" upstream/crates/horizon-client/src/android/platform.rs
+          grep -q "android_roboto" upstream/crates/horizon-client/src/ui_theme.rs
+          grep -q 'Аккаунт' upstream/crates/horizon-client/src/android/catalog.rs
+          grep -q "Self(percent.clamp(40, 100))" upstream/crates/horizon-client/src/android/display.rs
