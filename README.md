@@ -30,7 +30,7 @@
 >
 > [**Скачать последнюю тестовую сборку с настройкой кнопок и оптимизацией чанков**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/android-touch-fps-test-2026-10-29)
 >
-> Это **Pre-release**, не стабильная версия. Ссылка станет доступной после успешного завершения [проверочной сборки ARM64](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions/runs/40778979920). Изменения FPS и плавности требуют проверки на устройстве.
+> Предыдущая тестовая версия (Pre-release) сохранена для сравнения. Новая v1.0.0 — в закреплённой ссылке выше.
 >
 > ---
 
@@ -38,7 +38,7 @@
 
 Native Android ARM64 Minecraft Rust client development, based on the Horizon Rust game engine (GPL-3.0).
 
-**Status: under active testing. No user-approved release.** This repository is a source *overlay*, not a second copy of the proprietary Minecraft game or a stand-alone playable game. The GitHub Actions workflow clones upstream, applies the overlay, downloads verified game metadata and compiles a native Android APK.
+**Status: user-approved v1.0.0 full Release build in GitHub Actions; actual device testing still recommended.** This repository is a source *overlay*, not a second copy of the proprietary Minecraft game or a stand-alone playable game. The GitHub Actions workflow clones upstream, applies the overlay, downloads verified game metadata and compiles a native Android APK.
 
 ## Implemented source changes
 
