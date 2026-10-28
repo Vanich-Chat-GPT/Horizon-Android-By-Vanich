@@ -43,3 +43,17 @@ jobs:
           grep -q "android_roboto" upstream/crates/horizon-client/src/ui_theme.rs
           grep -q 'Аккаунт' upstream/crates/horizon-client/src/android/catalog.rs
           grep -q "Self(percent.clamp(40, 100))" upstream/crates/horizon-client/src/android/display.rs
+          grep -q 'settings.render_distance = chunks' upstream/crates/horizon-client/src/android/launcher_pages.rs
+          grep -q 'settings.language = if self.catalog.config.russian' upstream/crates/horizon-client/src/android/launcher_pages.rs
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for name in (
+              'mipmap-anydpi-v26/ic_launcher.xml',
+              'drawable/ic_launcher_monochrome.xml',
+              'values/horizon_icon_colors.xml',
+              'values/styles.xml',
+          ):
+              ET.parse(Path('upstream/packaging/android/res') / name)
+          ET.parse('upstream/packaging/android/AndroidManifest.xml')
+          PY
