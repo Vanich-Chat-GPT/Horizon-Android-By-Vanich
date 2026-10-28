@@ -393,4 +393,36 @@ patch(pages, '''            Some(Action::Language) => {
                 self.catalog.config.save(&self.home)?;
             }''')
 
+
+# Android 13–16 supports Material themed launcher icons when the adaptive icon
+# declares a monochrome layer. Keep the upstream artwork as foreground.
+manifest = "packaging/android/AndroidManifest.xml"
+patch(manifest, 'android:icon="@drawable/launcher_icon"',
+      'android:icon="@mipmap/ic_launcher"')
+res = ROOT / "packaging/android/res"
+(res / "mipmap-anydpi-v26").mkdir(parents=True, exist_ok=True)
+(res / "mipmap-anydpi-v26/ic_launcher.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/horizon_icon_background"/>
+    <foreground android:drawable="@drawable/launcher_icon"/>
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome"/>
+</adaptive-icon>
+""", encoding="utf-8")
+(res / "values/horizon_icon_colors.xml").write_text("""<resources>
+    <color name="horizon_icon_background">#141218</color>
+</resources>
+""", encoding="utf-8")
+(res / "drawable/ic_launcher_monochrome.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M54,14 L87,33 L87,74 L54,93 L21,74 L21,33 Z"/>
+    <path android:fillColor="#FF141218"
+        android:pathData="M54,32 L70,41 L70,65 L54,74 L38,65 L38,41 Z"/>
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M54,38 L65,44 L54,50 L43,44 Z M42,50 L51,55 L51,68 L42,63 Z M57,55 L66,50 L66,63 L57,68 Z"/>
+</vector>
+""", encoding="utf-8")
+
 print("Horizon Android overlay applied successfully.")
