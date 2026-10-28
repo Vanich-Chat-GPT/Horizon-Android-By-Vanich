@@ -159,4 +159,14 @@ patch(theme, '    ink_soft: 0xc5c7d1,', '    ink_soft: 0xcac4d0,')
 patch(theme, '    muted: 0x8b8f9c,', '    muted: 0x938f99,')
 patch(theme, '    accent: 0x9a86ff,', '    accent: 0xd0bcff,')
 patch(theme, '    on_accent: 0x0d0e13,', '    on_accent: 0x381e72,')
+
+# Pin the exact Mojang 26.3 manifest the Horizon engine is built against.
+# Mojang can republish version metadata; an unpinned latest manifest triggers
+# Horizon's built-in integrity gate even when game JAR hashes match.
+preparer = "tools/android_prepare.py"
+patch(preparer, "    lab.download(entry['url'], manifest_path, entry['sha1'])",
+      """    pinned_sha1 = "11f1aefe473eefba0af62e3286c33b692807b2eb"
+    pinned_url = f"https://piston-meta.mojang.com/v1/packages/{pinned_sha1}/{version}.json"
+    lab.download(pinned_url, manifest_path, pinned_sha1)""")
+
 print("Horizon Android overlay applied successfully.")
