@@ -140,4 +140,22 @@ replace(pages,
                     tr("Edit in game: Options > Controls > Customize Touch").into();
             }
             Some(Action::GraphicsPreset) => {''')
+
+# The upstream game thread currently drains and allocates *all* completed
+# streaming jobs every update, then performs each lighting/mesh/world mutation
+# in the same frame. Limit Android intake to bound per-frame work.
+# Queue ownership stays with mpsc, so unprocessed results persist safely until
+# the next update. Desktop is unaffected.
+replace("crates/horizon-client/src/streaming.rs",
+        '''        let received = std::iter::from_fn(|| self.results.try_recv().ok());
+        for done in deferred.into_iter().chain(received.collect::<Vec<_>>()) {''',
+        '''        let received = std::iter::from_fn(|| self.results.try_recv().ok());
+        // Avoid a frame-time spike when many completed chunk meshes, lighting
+        // jobs and generated columns arrive at once on mobile CPUs.
+        #[cfg(target_os = "android")]
+        let received = received.take(48).collect::<Vec<_>>();
+        #[cfg(not(target_os = "android"))]
+        let received = received.collect::<Vec<_>>();
+        for done in deferred.into_iter().chain(received) {''')
+
 print("Native touch editor and graphics/streaming controls patched.")
