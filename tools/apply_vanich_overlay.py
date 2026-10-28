@@ -107,21 +107,20 @@ patch(pages, '    let label = ui.fit_text(Face::Medium, font, label, w - 2.0 * p
 for en in ("Getting your game ready", "Ready to play", "Your Java worlds",
            "Your Java worlds, on Android", "Retry installation", "Download Minecraft 26.3",
            "Horizon Mods", "Shader Packs", "Resource Packs", "Launch settings"):
-    patch(pages, f'                    "{en}"' if en in ("Getting your game ready", "Ready to play",
-          "Your Java worlds", "Your Java worlds, on Android") else f'                "{en}"' if en in (
-          "Horizon Mods", "Shader Packs", "Resource Packs") else f'                    "{en}"' if en != "Launch settings" else f'                "{en}",',
-          f'                    tr("{en}")' if en in ("Getting your game ready", "Ready to play",
-          "Your Java worlds", "Your Java worlds, on Android") else f'                tr("{en}")' if en in (
-          "Horizon Mods", "Shader Packs", "Resource Packs") else f'                    tr("{en}")' if en != "Launch settings" else f'                tr("{en}"),')
+    patch(pages, f'"{en}"', f'tr("{en}")')
 patch(pages, '                if w < 700.0 {\n                    match page {', '                if w < 700.0 {\n                    match page {')
 patch(pages, '                        Page::Installed => "Files",', '                        Page::Installed => tr("Files"),')
 patch(pages, '                        Page::Settings => "Setup",', '                        Page::Settings => tr("Setup"),')
 patch(pages, '                    "On / up to 30 min"', '                    "On / up to 30 min"')
 patch(pages, '                ("Rendering", c.renderer.label().to_owned(), Action::Renderer),',
       '                (tr("Rendering"), c.renderer.label().to_owned(), Action::Renderer),')
-for en in ("Client resolution", "Profile", "Orientation", "Input", "Performance recording",
+for en in ("Client resolution", "Orientation", "Performance recording",
            "Performance report", "Server"):
-    patch(pages, f'                    "{en}",', f'                    tr("{en}"),')
+    patch(pages, f'"{en}"', f'tr("{en}")')
+patch(pages, '("Profile", format!("Profile {}", c.profile), Action::Profile)',
+      '(tr("Profile"), format!("Profile {}", c.profile), Action::Profile)')
+patch(pages, '("Input", c.input_host.label().to_owned(), Action::InputHost)',
+      '(tr("Input"), c.input_host.label().to_owned(), Action::InputHost)')
 patch(pages, '                (\n                    tr("Server"),', '''                (
                     tr("Language"),
                     (if c.russian { tr("Russian") } else { tr("English") }).into(),
