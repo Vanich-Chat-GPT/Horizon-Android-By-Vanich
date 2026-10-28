@@ -1,0 +1,41 @@
+name: Touch editor and chunk optimization checks
+on:
+  push:
+    branches: [feature/touch-editor-chunk-stability]
+    paths:
+      - 'tools/apply_touch_performance.py'
+      - '.github/workflows/touch-performance-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  native-patch-check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: overlay
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: Vasysik/horizon-android
+          ref: android
+          path: upstream
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.95.0'
+      - name: Patch both original launcher and editor
+        run: |
+          python3 overlay/tools/apply_vanich_overlay.py upstream
+          python3 overlay/tools/apply_touch_performance.py upstream
+      - name: Validate Rust format, touch settings and optimizations
+        run: |
+          python3 -m py_compile overlay/tools/apply_touch_performance.py
+          cd upstream
+          cargo fmt --all
+          git diff --check
+          grep -q 'snap_to_grid' crates/horizon-client/src/touch/editor.rs
+          grep -q 'settings.prioritize_chunk_updates = 1' crates/horizon-client/src/android/launcher_pages.rs
+          grep -q 'settings.chunk_fade = if fancy' crates/horizon-client/src/android/launcher_pages.rs
