@@ -376,4 +376,21 @@ patch(catalog, '        "Graphics preset" => "Профиль графики",',
       '''        "Graphics profile saved. Applies when Play starts." => "Профиль сохранён. Изменения применятся при запуске.",
         "Graphics preset" => "Профиль графики",''')
 
+
+# Keep the game itself in the same language as the Android launcher. Horizon's
+# own language resources are still loaded through its standard Mojang pipeline.
+patch(pages, '''            Some(Action::Language) => {
+                self.catalog.config.russian = !self.catalog.config.russian;
+                crate::catalog::set_language(self.catalog.config.russian);
+                self.catalog.config.save(&self.home)?;
+            }''', '''            Some(Action::Language) => {
+                self.catalog.config.russian = !self.catalog.config.russian;
+                crate::catalog::set_language(self.catalog.config.russian);
+                let path = self.catalog.config.game_home(&self.home).join("options.txt");
+                let mut settings = horizon_client::settings::Settings::load(&path);
+                settings.language = if self.catalog.config.russian { "ru_ru" } else { "en_us" }.into();
+                settings.save(&path);
+                self.catalog.config.save(&self.home)?;
+            }''')
+
 print("Horizon Android overlay applied successfully.")
