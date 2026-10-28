@@ -170,4 +170,71 @@ patch(pages,
 patch(pages,
     '''        crate::documents::draw_ui(&mut ui);''',
     '''        crate::documents::draw_ui(&mut ui);''')
+
+# Native Minecraft HUD glyphs as a visual signature in the launcher hero,
+# while Material You Roboto remains for legible long Cyrillic paragraphs.
+patch(pages,
+    '''            if installing {
+                let current = InstallStage::ALL''',
+    '''            // Minecraft's own HUD atlas provides the pixel-game subtitle.
+            ui.batch.text(
+                &gui.atlas,
+                "JAVA EDITION  /  ANDROID ARM64",
+                32.0 * scale,
+                (top + 80.0) * scale,
+                horizon_client::hud::rgba(208, 188, 255, 255),
+                true,
+            );
+            if installing {
+                let current = InstallStage::ALL''')
+
+# Fill remaining untranslated static native launcher guidance and status text.
+extra_ru = {
+    "Please keep Horizon open. Downloaded files are kept for retry.": "Не закрывайте Horizon. Загрузки сохраняются для повтора.",
+    "01  Open a world or join a Java server": "01  Откройте мир или подключитесь к серверу Java",
+    "02  Touch setup: Options > Controls": "02  Управление: Настройки > Управление",
+    "03  Find packs and .hmod in the tabs": "03  Найдите ресурсы и .hmod во вкладках",
+    "01  Download resources from Mojang": "01  Загрузка ресурсов Mojang",
+    "02  Install and verify on this phone": "02  Установка и проверка на устройстве",
+    "03  Play offline or sign in for servers": "03  Играйте офлайн или войдите для серверов",
+    "Search Horizon mods or paste an HTTPS .hmod link": "Найдите моды Horizon или вставьте HTTPS-ссылку .hmod",
+    "Horizon catalog / ZIP support is experimental": "Каталог Horizon и ZIP пока экспериментальные",
+    "Verified downloads / enable in Installed": "Проверенные загрузки / включите в «Установлено»",
+    "Open folder": "Открыть папку",
+    "Import .hmod": "Импорт .hmod",
+    "64-bit required": "Требуется 64-битная система",
+    "Open in Files / Reports": "Открыть в файлах / отчётах",
+    "Singleplayer / tap to enter server": "Одиночная игра / нажмите для ввода сервера",
+    "Opened in Files. Return here after copying files.": "Открыты файлы. Вернитесь после копирования.",
+    "Open the system Files app and choose Horizon Android.": "Откройте системные файлы и выберите Horizon Android.",
+    "Repository opened in browser.": "Репозиторий открыт в браузере.",
+    "No browser available to open the repository.": "Браузер для открытия репозитория не найден.",
+    "No startup error. In game: F3 shows device, terrain and frame diagnostics.": "Ошибок запуска нет. В игре F3 показывает диагностику устройства и FPS.",
+    "Recording starts on Play. Detailed timings add overhead. Return here to save the report.": "Запись начинается при запуске. Подробная диагностика снижает FPS.",
+    "Performance recording off.": "Запись производительности выключена.",
+    "Reports opened in Files. Copy or share a report from there.": "Отчёты открыты в файлах. Их можно скопировать.",
+    "Mouse mode uses a physical keyboard. Touch mode keeps the Android keyboard.": "Режим мыши требует клавиатуру. Сенсорный режим использует клавиатуру Android.",
+    "Applies to the launcher and game. Does not change touch bindings.": "Применяется к лаунчеру и игре. Кнопки управления не меняются.",
+    "Uses the system GPU driver. Applies on the next game launch.": "Используется системный драйвер GPU. Применится при следующем запуске.",
+    "For older GPUs. Requires ES 3.0+ and sufficient driver limits.": "Для старых GPU. Нужен OpenGL ES 3.0+.",
+    "Groups terrain draws and enables supported GPU culling.": "Группирует отрисовку чанков и отсечение на GPU.",
+    "Direct terrain draws for drivers with missing or transparent blocks.": "Прямая отрисовка для драйверов с пропадающими блоками.",
+    "Each profile keeps its own game settings and saves.": "У каждого профиля отдельные настройки и миры.",
+    "Deletes only the selected file from this profile. This cannot be undone.": "Удаляет выбранный файл без возможности восстановления.",
+}
+p=ROOT/catalog
+src=p.read_text(encoding="utf-8")
+anchor='        "Minecraft Java on Android Native" => "Minecraft Java на Android — нативно",'
+assert src.count(anchor)==1
+entries=''.join('        '+repr(en).replace("'",'"')+' => '+repr(ru).replace("'",'"')+',\n' for en,ru in extra_ru.items())
+p.write_text(src.replace(anchor,entries+anchor,1),encoding="utf-8")
+for path in (pages,"crates/horizon-client/src/android/chooser.rs"):
+    p=ROOT/path
+    src=p.read_text(encoding="utf-8")
+    for en in extra_ru:
+        old='"'+en+'"'
+        if old in src:
+            src=src.replace(old,'tr("'+en+'")')
+    p.write_text(src,encoding="utf-8")
+
 print("Release polish: native finger shortcut, editor localization, search heading, animated Material press feedback.")
