@@ -1,6 +1,6 @@
 # Horizon Android by Vanich
 
-Native Android ARM64 Minecraft Java client development, based on [Vasysik/horizon-android](https://github.com/Vasysik/horizon-android) and the Horizon Rust game engine (GPL-3.0).
+Native Android ARM64 Minecraft Rust client development, based on the Horizon Rust game engine (GPL-3.0).
 
 **Status: under active testing. No user-approved release.** This repository is a source *overlay*, not a second copy of the proprietary Minecraft game or a stand-alone playable game. The GitHub Actions workflow clones upstream, applies the overlay, downloads verified game metadata and compiles a native Android APK.
 
