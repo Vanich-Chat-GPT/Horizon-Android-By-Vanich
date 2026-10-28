@@ -6,6 +6,16 @@
 
 ---
 
+## GitHub Topics / теги для поиска
+
+`minecraft` · `minecraft-java` · `minecraft-java-edition` · `minecraft-android` · `minecraft-launcher` · `android` · `android-16` · `arm64` · `native-android` · `rust` · `vulkan` · `wgpu` · `material-you` · `touch-controls` · `gaming` · `open-source` · `horizon-android` · `minecraft-client`
+
+**Описание для GitHub:** Native Minecraft Java Edition on Android ARM64 — Horizon Android by Vanich, Rust/Vulkan launcher with touch controls, Material You, Russian localization and performance settings.
+
+> Для отображения тегов в блоке **About** на GitHub владелец репозитория должен добавить их через значок ⚙️ рядом с About → Topics. GitHub Actions не имеет прав изменять Topics этого репозитория.
+
+---
+
 # Minecraft Java on Android Native — Horizon Android by Vanich
 
 **Minecraft Java Edition on Android ARM64 — native Rust/Vulkan client.**
