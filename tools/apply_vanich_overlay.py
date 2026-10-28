@@ -188,18 +188,17 @@ patch(ui_theme, '''        Self {
                 })
             }).as_deref().and_then(|bytes| FontRef::try_from_slice(bytes).ok())
         }
-        Self {
-            faces: [
-                #[cfg(target_os = "android")]
-                android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_REGULAR)),
-                #[cfg(not(target_os = "android"))]
-                f(horizon_theme::fonts::GEIST_REGULAR),
-                #[cfg(target_os = "android")]
-                android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_MEDIUM)),
-                #[cfg(not(target_os = "android"))]
-                f(horizon_theme::fonts::GEIST_MEDIUM),
-            ],
-        }''')
+        #[cfg(target_os = "android")]
+        let faces = [
+            android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_REGULAR)),
+            android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_MEDIUM)),
+        ];
+        #[cfg(not(target_os = "android"))]
+        let faces = [
+            f(horizon_theme::fonts::GEIST_REGULAR),
+            f(horizon_theme::fonts::GEIST_MEDIUM),
+        ];
+        Self { faces }''')
 
 # Translate the native popover choices as well as the main settings page.
 chooser = "crates/horizon-client/src/android/chooser.rs"
