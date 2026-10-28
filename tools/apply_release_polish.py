@@ -126,26 +126,15 @@ patch(editor,
         &std::path::PathBuf::from("options.txt")
     ).language.eq_ignore_ascii_case("ru_ru") {''',
     '''    if !crate::android_runtime::russian_ui() {''')
-# In-game locale flag defaults true; launcher updates it when language changes.
-runtime="crates/horizon-client/src/android_runtime.rs"
-patch(runtime,
-    '''use std::''',
-    '''use std::''') if False else None
-# Add the lightweight locale flag in the editor module instead: it is sourced
-# from the existing launcher atomic, no dependency on platform runtime.
+# Game HUD cannot import launcher-only catalog. Cache actual game locale.
 patch(editor,
     '''if !crate::android_runtime::russian_ui() {''',
-    '''if !crate::catalog::russian_ui() {''')
-patch(catalog,
-    '''pub fn set_language(russian: bool) {
-    RUSSIAN.store(russian, std::sync::atomic::Ordering::Relaxed);
-}''',
-    '''pub fn russian_ui() -> bool {
-    RUSSIAN.load(std::sync::atomic::Ordering::Relaxed)
-}
-pub fn set_language(russian: bool) {
-    RUSSIAN.store(russian, std::sync::atomic::Ordering::Relaxed);
-}''')
+    '''static RUSSIAN: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    if !*RUSSIAN.get_or_init(|| {
+        std::fs::read_to_string("options.txt").is_ok_and(|s| {
+            s.lines().any(|line| line.trim() == "lang:ru_ru")
+        })
+    }) {''')
 
 # Extend launcher localization of text displayed on settings and home.
 patch(catalog,
