@@ -9,13 +9,13 @@ from pathlib import Path
 
 ROOT = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path.cwd()
 
-def replace(path: str, before: str, after: str) -> None:
+def replace(path: str, before: str, after: str, expected: int = 1) -> None:
     file = ROOT / path
     data = file.read_text(encoding="utf-8")
     count = data.count(before)
-    if count != 1:
-        raise RuntimeError(f"{path}: expected one match, got {count}: {before[:95]!r}")
-    file.write_text(data.replace(before, after, 1), encoding="utf-8")
+    if count != expected:
+        raise RuntimeError(f"{path}: expected {expected} match(es), got {count}: {before[:95]!r}")
+    file.write_text(data.replace(before, after), encoding="utf-8")
 
 layout = "crates/horizon-client/src/touch/layout.rs"
 editor = "crates/horizon-client/src/touch/editor.rs"
@@ -59,9 +59,9 @@ replace(editor,
                     }
                     // Match the displayed size''')
 replace(editor, "place.size = 0.045 + value * 0.405;",
-        "place.size = 0.045 + value * 0.505;")
+        "place.size = 0.045 + value * 0.505;", expected=2)
 replace(editor, "(p.size - 0.045) / 0.405",
-        "(p.size - 0.045) / 0.505")
+        "(p.size - 0.045) / 0.505", expected=2)
 replace(editor,
         '''        for (rect, label) in [
             ([0.02, 0.04, 0.105, 0.075], "Done"),''',
