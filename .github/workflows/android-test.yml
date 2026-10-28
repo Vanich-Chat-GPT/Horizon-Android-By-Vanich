@@ -56,6 +56,7 @@ jobs:
         run: |
           python3 overlay/tools/apply_vanich_overlay.py upstream
           python3 overlay/tools/apply_touch_performance.py upstream
+          python3 overlay/tools/apply_release_polish.py upstream
       - name: Validate patched sources
         run: |
           python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py
@@ -69,6 +70,20 @@ jobs:
       - name: Prepare official engine metadata
         working-directory: upstream
         run: python3 tools/android_prepare.py
+      - name: Restore persistent Android signing key (required for updates)
+        env:
+          HORIZON_SIGNING_KEYSTORE_B64: ${{ secrets.HORIZON_SIGNING_KEYSTORE_B64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$HORIZON_SIGNING_KEYSTORE_B64" ]; then
+            echo 'Missing HORIZON_SIGNING_KEYSTORE_B64. Refusing to create a random per-build key: that would break Android updates.' >&2
+            exit 1
+          fi
+          mkdir -p upstream/.local/android
+          printf '%s' "$HORIZON_SIGNING_KEYSTORE_B64" | base64 --decode > upstream/.local/android/debug.keystore
+          chmod 600 upstream/.local/android/debug.keystore
+          keytool -list -keystore upstream/.local/android/debug.keystore -storepass android -alias androiddebugkey >/dev/null
       - name: Build Android ARM64 public-mode TEST APK
         working-directory: upstream
         run: python3 tools/android_build.py --abi arm64-v8a --public --gradle "$(command -v gradle)" --java-home "$JAVA_HOME"
