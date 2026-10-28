@@ -77,6 +77,30 @@ pub fn tr(text: &str) -> &str {
         "Horizon Mods" => "Моды Horizon",
         "Shader Packs" => "Пакеты шейдеров",
         "Resource Packs" => "Наборы ресурсов",
+        "Native resolution" => "Исходное разрешение",
+        "Lower resolution for the whole picture" => "Меньшее разрешение изображения",
+        "Custom percentage..." => "Свой процент...",
+        "Small screens retain a usable menu size." => "Меню остаётся читаемым на маленьких экранах.",
+        "Input mode" => "Режим ввода",
+        "Rendering mode" => "Режим рендеринга",
+        "Screen orientation" => "Ориентация экрана",
+        "Choose profile" => "Выбрать профиль",
+        "Default profile" => "Основной профиль",
+        "Create profile" => "Создать профиль",
+        "Separate saves, mods and packs" => "Отдельные миры, моды и ресурсы",
+        "Remove add-on?" => "Удалить дополнение?",
+        "Cancel" => "Отмена",
+        "Vulkan / GPU batching" => "Vulkan / ускорение GPU",
+        "Vulkan / compatibility" => "Vulkan / совместимость",
+        "OpenGL ES / experimental" => "OpenGL ES / экспериментально",
+        "Automatic" => "Автоматически",
+        "Touch & Android keyboard" => "Касания и клавиатура Android",
+        "Keyboard & mouse" => "Клавиатура и мышь",
+        "Landscape (sensor)" => "Альбомная (датчик)",
+        "Portrait (sensor)" => "Портретная (датчик)",
+        "Landscape (reversed)" => "Альбомная (обратная)",
+        "Portrait (reversed)" => "Портретная (обратная)",
+        "Automatic rotation" => "Автоповорот",
         "On" => "Вкл.",
         "Off" => "Выкл.",
         _ => text,
@@ -159,6 +183,313 @@ patch(theme, '    ink_soft: 0xc5c7d1,', '    ink_soft: 0xcac4d0,')
 patch(theme, '    muted: 0x8b8f9c,', '    muted: 0x938f99,')
 patch(theme, '    accent: 0x9a86ff,', '    accent: 0xd0bcff,')
 patch(theme, '    on_accent: 0x0d0e13,', '    on_accent: 0x381e72,')
+
+# Prefer the device's licensed system Roboto (Cyrillic coverage + Material type).
+# The once-cell owns the bytes for the lifetime of the process, avoiding per-frame
+# allocations and bundling redistributed font binaries.
+ui_theme = "crates/horizon-client/src/ui_theme.rs"
+patch(ui_theme, '''        Self {
+            faces: [
+                f(horizon_theme::fonts::GEIST_REGULAR),
+                f(horizon_theme::fonts::GEIST_MEDIUM),
+            ],
+        }''', '''        #[cfg(target_os = "android")]
+        fn android_roboto() -> Option<FontRef<'static>> {
+            static FONT_BYTES: std::sync::OnceLock<Option<Vec<u8>>> =
+                std::sync::OnceLock::new();
+            FONT_BYTES.get_or_init(|| {
+                [
+                    "/system/fonts/Roboto-Regular.ttf",
+                    "/system/fonts/RobotoStatic-Regular.ttf",
+                    "/system/fonts/NotoSans-Regular.ttf",
+                ]
+                .into_iter()
+                .find_map(|path| {
+                    let data = std::fs::read(path).ok()?;
+                    let font = FontRef::try_from_slice(&data).ok()?;
+                    // Prevent Cyrillic labels from turning into empty glyphs.
+                    (font.glyph_id('Ж').0 != 0).then_some(data)
+                })
+            }).as_deref().and_then(|bytes| FontRef::try_from_slice(bytes).ok())
+        }
+        #[cfg(target_os = "android")]
+        let faces = [
+            android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_REGULAR)),
+            android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_MEDIUM)),
+        ];
+        #[cfg(not(target_os = "android"))]
+        let faces = [
+            f(horizon_theme::fonts::GEIST_REGULAR),
+            f(horizon_theme::fonts::GEIST_MEDIUM),
+        ];
+        Self { faces }''')
+
+# Translate the native popover choices as well as the main settings page.
+chooser = "crates/horizon-client/src/android/chooser.rs"
+patch(chooser, 'use crate::catalog::RendererMode;',
+      'use crate::catalog::{RendererMode, tr};')
+patch(chooser, '        self.chooser = Some(Chooser {\n            title,\n            help,\n            choices,',
+      '''        let choices = choices.into_iter().map(|(name, detail, action, selected)| (
+            tr(&name).to_owned(), tr(&detail).to_owned(), action, selected
+        )).collect();
+        self.chooser = Some(Chooser {
+            title: tr(title),
+            help: tr(help),
+            choices,''')
+patch(chooser, '"Enter a value from 25 to 100"', '"Enter a value from 40 to 100"')
+patch(chooser, '"Native resolution"', 'tr("Native resolution")')
+patch(chooser, '"Lower resolution for the whole picture"', 'tr("Lower resolution for the whole picture")')
+patch(chooser, '"Custom percentage...".into()', 'tr("Custom percentage...").into()')
+patch(chooser, '"Client resolution",\n                    "Small screens retain a usable menu size.",',
+      'tr("Client resolution"),\n                    tr("Small screens retain a usable menu size."),')
+
+
+# Android 12–16 wallpaper-based Material You primary color.
+# The launcher remains a native Rust renderer; we query the system color once
+# through Android Context/Resources rather than using XML-only Material widgets.
+patch("crates/horizon-client/src/ui_theme.rs",
+      '    pub const ACCENT: u32 = hex(P.accent, 255);',
+      '''    pub const ACCENT: u32 = hex(P.accent, 255);
+    static LAUNCHER_ACCENT: std::sync::atomic::AtomicU32 =
+        std::sync::atomic::AtomicU32::new(0);
+    pub fn set_launcher_accent(android_argb: u32) {
+        LAUNCHER_ACCENT.store(android_argb, std::sync::atomic::Ordering::Relaxed);
+    }
+    pub fn launcher_accent() -> u32 {
+        let android_argb = LAUNCHER_ACCENT.load(std::sync::atomic::Ordering::Relaxed);
+        if android_argb == 0 { ACCENT } else { hex(android_argb & 0x00ff_ffff, 255) }
+    }''')
+patch("crates/horizon-client/src/android/platform.rs",
+      'pub fn clipboard_get() -> Option<String> {',
+      '''pub fn system_material_accent() -> Option<u32> {
+    with_context(|env, activity| {
+        let res = env.call_method(
+            activity,
+            "getResources",
+            "()Landroid/content/res/Resources;",
+            &[],
+        )?.l()?;
+        let name = JObject::from(env.new_string("system_accent1_200")?);
+        let ty = JObject::from(env.new_string("color")?);
+        let package = JObject::from(env.new_string("android")?);
+        let id = env.call_method(
+            &res,
+            "getIdentifier",
+            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I",
+            &[JValue::Object(&name), JValue::Object(&ty), JValue::Object(&package)],
+        )?.i()?;
+        if id == 0 {
+            return Ok(0u32);
+        }
+        Ok(env.call_method(
+            activity, "getColor", "(I)I", &[JValue::Int(id)],
+        )?.i()? as u32)
+    }).filter(|value| *value != 0)
+}
+
+pub fn clipboard_get() -> Option<String> {''')
+patch("crates/horizon-client/src/android/launcher.rs",
+      '        crate::platform::set_orientation(self.catalog.config.orientation);',
+      '''        if let Some(system_color) = crate::platform::system_material_accent() {
+            horizon_client::ui_theme::color::set_launcher_accent(system_color);
+        }
+        crate::platform::set_orientation(self.catalog.config.orientation);''')
+# Only Android launcher components use wallpaper accent; retain unchanged game UI.
+for path in (
+    "crates/horizon-client/src/android/launcher_pages.rs",
+    "crates/horizon-client/src/android/chooser.rs",
+    "crates/horizon-client/src/android/login.rs",
+):
+    file = ROOT / path
+    source = file.read_text(encoding="utf-8")
+    file.write_text(source.replace("color::ACCENT", "color::launcher_accent()"), encoding="utf-8")
+
+
+# Real device-oriented graphics profiles, backed by Minecraft options.txt and
+# the native render surface. Changing a profile never occurs silently at launch.
+patch(catalog, '#[derive(Clone, Default, Serialize, Deserialize)]\n#[serde(default)]\npub struct Config {',
+      '''#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum QualityPreset {
+    Eco,
+    #[default]
+    Balanced,
+    Quality,
+}
+impl QualityPreset {
+    pub fn next(self) -> Self {
+        match self { Self::Eco => Self::Balanced, Self::Balanced => Self::Quality, Self::Quality => Self::Eco }
+    }
+    pub fn label(self) -> &'static str {
+        match self { Self::Eco => "Economy", Self::Balanced => "Balanced", Self::Quality => "Quality" }
+    }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Config {''')
+patch(catalog, '    pub russian: bool,\n', '    pub russian: bool,\n    pub quality_preset: QualityPreset,\n')
+patch(catalog, '        "Rendering" => "Рендеринг",',
+      '''        "Graphics preset" => "Профиль графики",
+        "Economy" => "Экономия",
+        "Balanced" => "Баланс",
+        "Quality" => "Качество",
+        "Rendering" => "Рендеринг",''')
+patch(pages, '    Language,\n', '    Language,\n    GraphicsPreset,\n')
+patch(pages, '                (tr("Rendering"), c.renderer.label().to_owned(), Action::Renderer),',
+      '''                (tr("Graphics preset"), tr(c.quality_preset.label()).into(), Action::GraphicsPreset),
+                (tr("Rendering"), c.renderer.label().to_owned(), Action::Renderer),''')
+patch(pages, '9.0 * row_height', '10.0 * row_height')
+patch(pages, '9.0 * row_height', '10.0 * row_height')
+patch(pages, '            Some(Action::Language) => {',
+      '''            Some(Action::GraphicsPreset) => {
+                use crate::catalog::QualityPreset;
+                let next = self.catalog.config.quality_preset.next();
+                self.catalog.config.quality_preset = next;
+                let (scale, chunks, simulation, max_fps, fancy) = match next {
+                    QualityPreset::Eco => (50, 6, 5, 60, false),
+                    QualityPreset::Balanced => (75, 9, 7, 60, false),
+                    QualityPreset::Quality => (100, 14, 10, 90, true),
+                };
+                let resolution = crate::display::RenderScale::new(scale);
+                self.catalog.config.render_scale = resolution;
+                crate::display::set_scale(resolution);
+                let path = self.catalog.config.game_home(&self.home).join("options.txt");
+                let mut settings = horizon_client::settings::Settings::load(&path);
+                settings.render_distance = chunks;
+                settings.simulation_distance = simulation;
+                settings.max_fps = max_fps;
+                settings.vsync = !fancy;
+                settings.graphics_preset = if fancy { "fancy" } else { "fast" }.into();
+                settings.clouds = if fancy { "true" } else { "false" }.into();
+                settings.particles = if fancy { 0 } else { 2 };
+                settings.entity_shadows = fancy;
+                settings.smooth_lighting = fancy;
+                settings.mipmap_levels = if fancy { 4 } else { 0 };
+                settings.biome_blend = if fancy { 2 } else { 0 };
+                settings.save(&path);
+                self.catalog.config.save(&self.home)?;
+                self.catalog.status = tr("Graphics profile saved. Applies when Play starts.").into();
+            }
+            Some(Action::Language) => {''')
+patch(catalog, '        "Graphics preset" => "Профиль графики",',
+      '''        "Graphics profile saved. Applies when Play starts." => "Профиль сохранён. Изменения применятся при запуске.",
+        "Graphics preset" => "Профиль графики",''')
+
+
+# Keep the game itself in the same language as the Android launcher. Horizon's
+# own language resources are still loaded through its standard Mojang pipeline.
+patch(pages, '''            Some(Action::Language) => {
+                self.catalog.config.russian = !self.catalog.config.russian;
+                crate::catalog::set_language(self.catalog.config.russian);
+                self.catalog.config.save(&self.home)?;
+            }''', '''            Some(Action::Language) => {
+                self.catalog.config.russian = !self.catalog.config.russian;
+                crate::catalog::set_language(self.catalog.config.russian);
+                let path = self.catalog.config.game_home(&self.home).join("options.txt");
+                let mut settings = horizon_client::settings::Settings::load(&path);
+                settings.language = if self.catalog.config.russian { "ru_ru" } else { "en_us" }.into();
+                settings.save(&path);
+                self.catalog.config.save(&self.home)?;
+            }''')
+
+
+# Android 13–16 supports Material themed launcher icons when the adaptive icon
+# declares a monochrome layer. Keep the upstream artwork as foreground.
+manifest = "packaging/android/AndroidManifest.xml"
+patch(manifest, 'android:icon="@drawable/launcher_icon"',
+      'android:icon="@mipmap/ic_launcher"')
+res = ROOT / "packaging/android/res"
+(res / "mipmap-anydpi-v26").mkdir(parents=True, exist_ok=True)
+(res / "mipmap-anydpi-v26/ic_launcher.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/horizon_icon_background"/>
+    <foreground android:drawable="@drawable/launcher_icon"/>
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome"/>
+</adaptive-icon>
+""", encoding="utf-8")
+(res / "values/horizon_icon_colors.xml").write_text("""<resources>
+    <color name="horizon_icon_background">#141218</color>
+</resources>
+""", encoding="utf-8")
+(res / "drawable/ic_launcher_monochrome.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M54,14 L87,33 L87,74 L54,93 L21,74 L21,33 Z"/>
+    <path android:fillColor="#FF141218"
+        android:pathData="M54,32 L70,41 L70,65 L54,74 L38,65 L38,41 Z"/>
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M54,38 L65,44 L54,50 L43,44 Z M42,50 L51,55 L51,68 L42,63 Z M57,55 L66,50 L66,63 L57,68 Z"/>
+</vector>
+""", encoding="utf-8")
+
+
+# Localize native account screen labels, without altering authentication
+# protocol messages or account/token handling.
+login = "crates/horizon-client/src/android/login.rs"
+patch(login, 'use super::pages::{Action, button};',
+      'use super::pages::{Action, button};\nuse crate::catalog::tr;')
+patch(login, 'format!("Signed in: {name}")',
+      'format!("{}: {name}", tr("Signed in"))')
+patch(login, 'format!("Sign in required: {name}")',
+      'format!("{}: {name}", tr("Sign in required"))')
+patch(login, '"Signing in...".into()', 'tr("Signing in...").into()')
+patch(login, 'format!("Offline: {offline_name}")',
+      'format!("{}: {offline_name}", tr("Offline"))')
+patch(login, '"Offline / Sign in".into()', 'tr("Offline / Sign in").into()')
+for text in (
+    "Offline player name",
+    "Used when signed out of Microsoft.",
+    "Accounts",
+    "Account saved securely. Sessions renew automatically.",
+    "Your password is entered in Microsoft's browser.",
+    "Requesting a sign-in code...",
+):
+    patch(login, f'"{text}"', f'tr("{text}")')
+patch(login, '"Offline player name"', 'tr("Offline player name")')
+for en, ru in (
+    ("Signed in", "Выполнен вход"),
+    ("Sign in required", "Требуется вход"),
+    ("Signing in...", "Выполняется вход..."),
+    ("Offline", "Офлайн"),
+    ("Offline / Sign in", "Офлайн / Войти"),
+    ("Offline player name", "Имя игрока офлайн"),
+    ("Used when signed out of Microsoft.", "Используется без аккаунта Microsoft."),
+    ("Accounts", "Аккаунты"),
+    ("Account saved securely. Sessions renew automatically.", "Аккаунт сохранён. Вход обновляется автоматически."),
+    ("Your password is entered in Microsoft's browser.", "Пароль вводится только в браузере Microsoft."),
+    ("Requesting a sign-in code...", "Запрос кода входа..."),
+    ("Done", "Готово"),
+    ("Copy code", "Копировать код"),
+    ("Enter an offline name", "Введите имя игрока"),
+    ("Request Minecraft API approval", "Запросить доступ Minecraft API"),
+    ("Copy code and open browser", "Копировать код и открыть браузер"),
+    ("Restart browser sign-in", "Повторить вход через браузер"),
+    ("Switch Microsoft account", "Сменить аккаунт Microsoft"),
+    ("Sign in with browser", "Войти через браузер"),
+    ("Use a device code instead", "Войти через код устройства"),
+    ("Cancel sign-in", "Отменить вход"),
+    ("Sign out", "Выйти"),
+    ("Close", "Закрыть"),
+    ("Back (sign-in continues)", "Назад (вход продолжается)"),
+):
+    patch(catalog, '        "On" => "Вкл.",',
+          f'        "{en}" => "{ru}",\n        "On" => "Вкл.",')
+
+
+# Install RU game-menu defaults on a fresh game profile, but never overwrite
+# options.txt (and the player's language choice) on an existing installation.
+patch("crates/horizon-client/src/android/launcher.rs",
+      '        if horizon_client::official_install::ready(&self.home) {',
+      '''        if horizon_client::official_install::ready(&self.home) {
+            let options_path = self.catalog.config.game_home(&self.home).join("options.txt");
+            if !options_path.exists() {
+                let mut initial = horizon_client::settings::Settings::load(&options_path);
+                initial.language = if self.catalog.config.russian { "ru_ru" } else { "en_us" }.into();
+                initial.save(&options_path);
+            }''')
 
 # Pin the exact Mojang 26.3 manifest the Horizon engine is built against.
 # Mojang can republish version metadata; an unpinned latest manifest triggers
