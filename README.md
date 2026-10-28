@@ -1,3 +1,11 @@
+> **📌 ЗАКРЕПЛЕНО / PINNED TEST BUILD — TOUCH + FPS**
+>
+> [**Скачать последнюю тестовую сборку с настройкой кнопок и оптимизацией чанков**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/android-touch-fps-test-2026-10-29)
+>
+> Это **Pre-release**, не стабильная версия. Ссылка станет доступной после успешного завершения [проверочной сборки ARM64](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions/runs/40778979920). Изменения FPS и плавности требуют проверки на устройстве.
+>
+> ---
+
 # Horizon Android by Vanich
 
 Native Android ARM64 Minecraft Rust client development, based on the Horizon Rust game engine (GPL-3.0).
