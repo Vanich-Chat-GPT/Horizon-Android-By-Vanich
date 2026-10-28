@@ -304,4 +304,76 @@ for path in (
     source = file.read_text(encoding="utf-8")
     file.write_text(source.replace("color::ACCENT", "color::launcher_accent()"), encoding="utf-8")
 
+
+# Real device-oriented graphics profiles, backed by Minecraft options.txt and
+# the native render surface. Changing a profile never occurs silently at launch.
+patch(catalog, '#[derive(Clone, Default, Serialize, Deserialize)]\n#[serde(default)]\npub struct Config {',
+      '''#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum QualityPreset {
+    Eco,
+    #[default]
+    Balanced,
+    Quality,
+}
+impl QualityPreset {
+    pub fn next(self) -> Self {
+        match self { Self::Eco => Self::Balanced, Self::Balanced => Self::Quality, Self::Quality => Self::Eco }
+    }
+    pub fn label(self) -> &'static str {
+        match self { Self::Eco => "Economy", Self::Balanced => "Balanced", Self::Quality => "Quality" }
+    }
+}
+
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Config {''')
+patch(catalog, '    pub russian: bool,\n', '    pub russian: bool,\n    pub quality_preset: QualityPreset,\n')
+patch(catalog, '        "Rendering" => "Рендеринг",',
+      '''        "Graphics preset" => "Профиль графики",
+        "Economy" => "Экономия",
+        "Balanced" => "Баланс",
+        "Quality" => "Качество",
+        "Rendering" => "Рендеринг",''')
+patch(pages, '    Language,\n', '    Language,\n    GraphicsPreset,\n')
+patch(pages, '                (tr("Rendering"), c.renderer.label().to_owned(), Action::Renderer),',
+      '''                (tr("Graphics preset"), tr(c.quality_preset.label()).into(), Action::GraphicsPreset),
+                (tr("Rendering"), c.renderer.label().to_owned(), Action::Renderer),''')
+patch(pages, '9.0 * row_height', '10.0 * row_height')
+patch(pages, '9.0 * row_height', '10.0 * row_height')
+patch(pages, '            Some(Action::Language) => {',
+      '''            Some(Action::GraphicsPreset) => {
+                use crate::catalog::QualityPreset;
+                let next = self.catalog.config.quality_preset.next();
+                self.catalog.config.quality_preset = next;
+                let (scale, chunks, simulation, max_fps, fancy) = match next {
+                    QualityPreset::Eco => (50, 6, 5, 60, false),
+                    QualityPreset::Balanced => (75, 9, 7, 60, false),
+                    QualityPreset::Quality => (100, 14, 10, 90, true),
+                };
+                let resolution = crate::display::RenderScale::new(scale);
+                self.catalog.config.render_scale = resolution;
+                crate::display::set_scale(resolution);
+                let path = self.catalog.config.game_home(&self.home).join("options.txt");
+                let mut settings = horizon_client::settings::Settings::load(&path);
+                settings.render_distance = chunks;
+                settings.simulation_distance = simulation;
+                settings.max_fps = max_fps;
+                settings.vsync = !fancy;
+                settings.graphics_preset = if fancy { "fancy" } else { "fast" }.into();
+                settings.clouds = if fancy { "true" } else { "false" }.into();
+                settings.particles = if fancy { 0 } else { 2 };
+                settings.entity_shadows = fancy;
+                settings.smooth_lighting = fancy;
+                settings.mipmap_levels = if fancy { 4 } else { 0 };
+                settings.biome_blend = if fancy { 2 } else { 0 };
+                settings.save(&path);
+                self.catalog.config.save(&self.home)?;
+                self.catalog.status = tr("Graphics profile saved. Applies when Play starts.").into();
+            }
+            Some(Action::Language) => {''')
+patch(catalog, '        "Graphics preset" => "Профиль графики",',
+      '''        "Graphics profile saved. Applies when Play starts." => "Профиль сохранён. Изменения применятся при запуске.",
+        "Graphics preset" => "Профиль графики",''')
+
 print("Horizon Android overlay applied successfully.")
