@@ -159,4 +159,65 @@ patch(theme, '    ink_soft: 0xc5c7d1,', '    ink_soft: 0xcac4d0,')
 patch(theme, '    muted: 0x8b8f9c,', '    muted: 0x938f99,')
 patch(theme, '    accent: 0x9a86ff,', '    accent: 0xd0bcff,')
 patch(theme, '    on_accent: 0x0d0e13,', '    on_accent: 0x381e72,')
+
+# Prefer the device's licensed system Roboto (Cyrillic coverage + Material type).
+# The once-cell owns the bytes for the lifetime of the process, avoiding per-frame
+# allocations and bundling redistributed font binaries.
+ui_theme = "crates/horizon-client/src/ui_theme.rs"
+patch(ui_theme, '''        Self {
+            faces: [
+                f(horizon_theme::fonts::GEIST_REGULAR),
+                f(horizon_theme::fonts::GEIST_MEDIUM),
+            ],
+        }''', '''        #[cfg(target_os = "android")]
+        fn android_roboto() -> Option<FontRef<'static>> {
+            static FONT_BYTES: std::sync::OnceLock<Option<Vec<u8>>> =
+                std::sync::OnceLock::new();
+            FONT_BYTES.get_or_init(|| {
+                [
+                    "/system/fonts/Roboto-Regular.ttf",
+                    "/system/fonts/RobotoStatic-Regular.ttf",
+                    "/system/fonts/NotoSans-Regular.ttf",
+                ]
+                .into_iter()
+                .find_map(|path| {
+                    let data = std::fs::read(path).ok()?;
+                    let font = FontRef::try_from_slice(&data).ok()?;
+                    // Prevent Cyrillic labels from turning into empty glyphs.
+                    (font.glyph_id('Ж').0 != 0).then_some(data)
+                })
+            }).as_deref().and_then(|bytes| FontRef::try_from_slice(bytes).ok())
+        }
+        Self {
+            faces: [
+                #[cfg(target_os = "android")]
+                android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_REGULAR)),
+                #[cfg(not(target_os = "android"))]
+                f(horizon_theme::fonts::GEIST_REGULAR),
+                #[cfg(target_os = "android")]
+                android_roboto().unwrap_or_else(|| f(horizon_theme::fonts::GEIST_MEDIUM)),
+                #[cfg(not(target_os = "android"))]
+                f(horizon_theme::fonts::GEIST_MEDIUM),
+            ],
+        }''')
+
+# Translate the native popover choices as well as the main settings page.
+chooser = "crates/horizon-client/src/android/chooser.rs"
+patch(chooser, 'use crate::catalog::RendererMode;',
+      'use crate::catalog::{RendererMode, tr};')
+patch(chooser, '        self.chooser = Some(Chooser {\n            title,\n            help,\n            choices,',
+      '''        let choices = choices.into_iter().map(|(name, detail, action, selected)| (
+            tr(&name).to_owned(), tr(&detail).to_owned(), action, selected
+        )).collect();
+        self.chooser = Some(Chooser {
+            title: tr(title),
+            help: tr(help),
+            choices,''')
+patch(chooser, '"Enter a value from 25 to 100"', '"Enter a value from 40 to 100"')
+patch(chooser, '"Native resolution"', 'tr("Native resolution")')
+patch(chooser, '"Lower resolution for the whole picture"', 'tr("Lower resolution for the whole picture")')
+patch(chooser, '"Custom percentage...".into()', 'tr("Custom percentage...").into()')
+patch(chooser, '"Client resolution",\n                    "Small screens retain a usable menu size.",',
+      'tr("Client resolution"),\n                    tr("Small screens retain a usable menu size."),')
+
 print("Horizon Android overlay applied successfully.")
