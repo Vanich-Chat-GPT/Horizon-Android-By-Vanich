@@ -25,7 +25,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Vasysik/horizon-android
-          ref: android
+          # Pin tested source layout; the upstream android branch was reorganized
+          # on 2026-10-29 and no longer contains the legacy patch paths.
+          ref: c11af2681216b2b27b36b2723d083729c300c595
           path: upstream
           persist-credentials: false
       - name: Install Java 17
