@@ -127,10 +127,10 @@ jobs:
       - name: Publish signed APK as GitHub Release only after successful verification
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.2.0-install-notifications
-          name: HorizonCraft v1.2.0 Android ARM64 — Installer notifications
+          tag_name: v1.2.0-r${{ github.run_number }}
+          name: HorizonCraft v1.2.0 · signed ARM64 APK · build #${{ github.run_number }}
           draft: false
-          prerelease: true
+          prerelease: false
           target_commitish: ${{ github.sha }}
           body: |
             Signed native ARM64 APK, verified with Android apksigner and aapt.
