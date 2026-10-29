@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Bound native Android chunk worker result queue without dropping results.
+"""Reduce temporary allocations in the Android chunk scheduler.
 
-Workers retry full queues instead of allocating an unbounded backlog. During
-shutdown, a sender checks stop so join() cannot block on a full queue.
-Desktop keeps original unbounded channel.
+Keep upstream worker/channel behavior unchanged: no artificial queue, chunk,
+RAM, or per-frame result caps. Reserve the expected candidate batch once to
+avoid repeated Vec growth during streaming updates.
 """
 from pathlib import Path
 import sys
