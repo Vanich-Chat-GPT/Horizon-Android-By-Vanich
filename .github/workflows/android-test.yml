@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   android-arm64:
@@ -161,9 +162,28 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Check only latest verified build publishes release
+        id: release_gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/android-test.yml/runs?branch=main&per_page=1" --jq '.workflow_runs[0].run_number')
+          if [ "$latest" = "$GITHUB_RUN_NUMBER" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping superseded build $GITHUB_RUN_NUMBER; latest is $latest"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish verified signed APK as a stable GitHub Release
+        if: steps.release_gate.outputs.publish == 'true'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.HORIZON_RELEASE_TOKEN || github.token }}
         uses: softprops/action-gh-release@v3
         with:
+          token: ${{ secrets.HORIZON_RELEASE_TOKEN || github.token }}
           tag_name: v1.3.3-ru-r${{ github.run_number }}
           name: HorizonCraft v1.3.3 — Русский интерфейс · ARM64
           prerelease: false
