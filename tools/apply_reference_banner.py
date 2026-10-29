@@ -52,6 +52,40 @@ replacement='''            if wide {
                 );
             }
 '''
-pages.write_text(source[:a]+replacement+source[b:],encoding="utf-8")
+source=source[:a]+replacement+source[b:]
+# Match the visual hierarchy from the supplied screenshot: grass block beside
+# the title, with progress and three install steps spanning the lower-left hero.
+old='''            let text_x = margin + 24.0;'''
+new='''            if wide && hero_h >= 330.0 {
+                let block_x = margin + 24.0;
+                ui.rounded(block_x, hero_y + 30.0, 112.0, 112.0, 8.0,
+                    horizon_client::hud::rgba(110, 78, 48, 255));
+                ui.rounded(block_x, hero_y + 30.0, 112.0, 38.0, 8.0,
+                    horizon_client::hud::rgba(80, 159, 68, 255));
+                ui.rounded(block_x + 12.0, hero_y + 39.0, 25.0, 9.0, 1.0,
+                    horizon_client::hud::rgba(132, 195, 82, 255));
+            }
+            let text_x = if wide && hero_h >= 330.0 { margin + 166.0 }
+                         else { margin + 24.0 };'''
+if source.count(old)!=1: raise RuntimeError("Cannot place reference grass block")
+source=source.replace(old,new,1)
+old='''            let bar_y = hero_y + 102.0;'''
+new='''            let bar_y = hero_y + if wide && hero_h >= 330.0 { 176.0 } else { 102.0 };'''
+if source.count(old)!=1: raise RuntimeError("Cannot position hero download meter")
+source=source.replace(old,new,1)
+old='''            ui.rounded(text_x, bar_y, bar_w, 6.0, 3.0, glass);'''
+new='''            let body_x = if wide && hero_h >= 330.0 { margin + 24.0 } else { text_x };
+            ui.rounded(body_x, bar_y, bar_w, 6.0, 3.0, glass);'''
+if source.count(old)!=1: raise RuntimeError("Cannot align hero progress bar")
+source=source.replace(old,new,1)
+source=source.replace('ui.rounded(text_x, bar_y, bar_w * overall,','ui.rounded(body_x, bar_y, bar_w * overall,',1)
+source=source.replace('ui.rounded(text_x, bar_y, bar_w, 6.0, 3.0, purple);','ui.rounded(body_x, bar_y, bar_w, 6.0, 3.0, purple);',1)
+old='''                ui.text(Face::Regular, 15.0, text_x,
+                        hero_y + 127.0 + i as f32 * line_step, muted, &line);'''
+new='''                ui.text(Face::Regular, 15.0, body_x,
+                        bar_y + 24.0 + i as f32 * line_step, muted, &line);'''
+if source.count(old)!=1: raise RuntimeError("Cannot align screenshot guide rows")
+source=source.replace(old,new,1)
+pages.write_text(source,encoding="utf-8")
 print("Bundled user reference image and native one-quad launcher backdrop.")
 
