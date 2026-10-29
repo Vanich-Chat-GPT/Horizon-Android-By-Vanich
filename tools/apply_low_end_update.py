@@ -45,11 +45,6 @@ replace(pages, '''                let bar_y = h - 152.0;
                     color::TEXT, &format!("Installing: {:.0}%", overall * 100.0));
                 ui.rounded(32.0, bar_y, w - 64.0, 4.0, 2.0, color::RAISED);''')
 
-# Make the home headline distinguish the update without changing Minecraft
-# gameplay strings or loading third-party game art.
-replace(pages, '"JAVA EDITION  /  ANDROID ARM64",',
-        '"JAVA EDITION  /  LOW END v1.1",')
-
 # Keep package identifier and signing key unchanged across releases.
 replace("packaging/android/build.gradle", "versionCode 25", "versionCode 27")
 replace("packaging/android/build.gradle", "versionName '1.0.0'", "versionName '1.1.1'")
