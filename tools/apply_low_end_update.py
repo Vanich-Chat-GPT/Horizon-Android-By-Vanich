@@ -41,13 +41,8 @@ replace(streaming, "let received = received.take(48).collect::<Vec<_>>();",
 # Applied after the earlier rounded-pill overlay. The highlight uses existing
 # palette constants and does not allocate textures or alter touch hitboxes.
 replace(pages, '''        (h * 0.5).min(26.0),
-        if accent { color::ACCENT } else { color::RAISED },
-    );
-    let padding''', '''        3.0,
-        if accent { color::ACCENT } else { color::RAISED },
-    );
-    ui.rounded(x + 3.0, y + 2.0, (w - 6.0).max(0.0), 2.0, 0.0, color::HOVER);
-    let padding''')
+        if accent { color::ACCENT } else { color::RAISED },''', '''        3.0,
+        if accent { color::ACCENT } else { color::RAISED },''')
 
 # Pixel-inspired low-cost parallax bands on the launcher background.
 # All rectangles are drawn by the existing batcher; no image decode or
