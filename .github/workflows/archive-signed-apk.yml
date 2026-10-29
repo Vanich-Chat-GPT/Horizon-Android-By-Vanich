@@ -24,9 +24,8 @@ jobs:
           mkdir -p dist
           if ! gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" \
                 --name Horizon-Android-By-Vanich-TEST-arm64 --dir dist; then
-            echo "No signed APK artifact in this run; skipping fallback publication."
-            echo "APK_MISSING=1" >> "$GITHUB_ENV"
-            exit 0
+            echo "::error::No signed APK artifact in the successful build."
+            exit 1
           fi
           test -s dist/horizon-android-public.apk
       - name: Verify the extracted APK has ARM64 native binaries
@@ -40,7 +39,6 @@ jobs:
           PY
       - name: Attempt GitHub Release using workflow-run token
         if: env.APK_MISSING != '1'
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.HORIZON_RELEASE_TOKEN || github.token }}
           SOURCE_RUN: ${{ github.event.workflow_run.run_number }}
@@ -56,7 +54,7 @@ jobs:
              --title "HorizonCraft v1.3.3 — signed Android ARM64" \
              --notes "Native ARM64; foreground installation notifications; Russian game locale; bounded chunk generation; signature compatible with v1.1.1. Device FPS/RAM gains not yet benchmarked."
       - name: Publish downloadable APK to dedicated public GitHub branch
-        if: env.APK_MISSING != '1'
+        if: env.APK_MISSING != '1' && success()
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
