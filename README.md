@@ -1,3 +1,20 @@
+# ⛏️ Horizon Android by Vanich
+### Minecraft Java Edition · Android ARM64 · Native Rust/Vulkan
+
+**🌿 v1.1.0 LOW END UPDATE — исходники в разработке**
+
+> 🧱 **Minecraft × Material You** — блоковые кнопки, динамические цвета Android, русский интерфейс и сенсорное управление.
+>
+> ⚡ **Low End** — экономный режим 4 чанка прорисовки / 4 симуляции, рендер 50%, облегчённые эффекты; ограничение обработки результатов чанков до 24 за кадр на Android.
+>
+> 📲 **Фоновые загрузки и уведомления** — запланированы; пока НЕ реализованы и не должны считаться работающими после закрытия приложения.
+>
+> 🧪 **Статус:** исходники v1.1.0 отправлены на проверку GitHub Actions; APK v1.1.0 ещё не опубликован. Производительность на устройствах не измерена.
+
+[**Сборки и тесты (Actions)**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions/workflows/android-test.yml) · [**Последний проверенный релиз v1.0.0**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.0.0-minecraft-java-android-native) · [**Настройка подписи**](docs/ANDROID_UPDATES.md)
+
+---
+
 > **📌 ЗАКРЕПЛЕНО / PINNED — Minecraft Java on Android Native v1.0.0**
 >
 > **[Скачать полный релиз APK (Android ARM64)](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.0.0-minecraft-java-android-native)**
