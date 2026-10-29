@@ -34,20 +34,8 @@ replace(pages, "settings.weather_radius = if fancy { 8 } else { 4 };",
 replace(streaming, "let received = received.take(48).collect::<Vec<_>>();",
         "let received = received.take(24).collect::<Vec<_>>();")
 
-# Minecraft-inspired square-cut bevel + Material You dynamic accent. Retain
-# accessible touch hit targets and existing Roboto Cyrillic text rendering.
-replace(pages, '''        (h * 0.5).min(26.0),
-        if accent { color::ACCENT } else { color::RAISED },
-    );
-    let padding = (w * 0.12).clamp(4.0, 12.0);''',
-    '''        4.0,
-        if accent { color::ACCENT } else { color::RAISED },
-    );
-    // Pixel-game bevel: subtle top highlight and bottom shadow. Dynamic
-    // Material You accent is still supplied by the launcher color palette.
-    ui.rounded(x + 2.0, y + 2.0, (w - 4.0).max(0.0), 2.0, 0.0, color::HOVER);
-    ui.rounded(x + 2.0, y + h - 4.0, (w - 4.0).max(0.0), 2.0, 0.0, color::BG);
-    let padding = (w * 0.12).clamp(4.0, 12.0);''')
+# Preserve the existing tested Material You launcher controls; visual redesign
+# will be implemented independently after the Low End build passes CI.
 
 # Make the home headline distinguish the update without changing Minecraft
 # gameplay strings or loading third-party game art.
@@ -58,4 +46,4 @@ replace(pages, '"JAVA EDITION  /  ANDROID ARM64",',
 replace("packaging/android/build.gradle", "versionCode 25", "versionCode 26")
 replace("packaging/android/build.gradle", "versionName '1.0.0'", "versionName '1.1.0'")
 
-print("Low End v1.1: Android chunk budget 24, Eco 4/4, balanced 7/5, block-style Material buttons, versionCode 26.")
+print("Low End v1.1: Android chunk budget 24, Eco 4/4, balanced 7/5, existing Material You buttons, versionCode 26.")
