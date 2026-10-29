@@ -50,6 +50,29 @@ replace('''                            if send.send(done).is_err() {
 # Keep queued lighting/mesh snapshots bounded on Android. When the queue
 # is full, leave dirty work marked in World so a later update can schedule it;
 # never discard chunks, lighting changes, or meshes.
+replace('''        let deferred = std::mem::take(&mut self.deferred);
+        let received = std::iter::from_fn(|| self.results.try_recv().ok());
+        for done in deferred.into_iter().chain(received.collect::<Vec<_>>()) {''',
+'''        // Apply at most 12 completed results per update on Android. Keep the
+        // remainder deferred/in the channel so mesh uploads cannot monopolize
+        // a frame; scheduling changes only, world visuals remain identical.
+        #[cfg(target_os = "android")]
+        let (deferred, received) = {
+            let mut deferred = std::mem::take(&mut self.deferred);
+            let take = deferred.len().min(12);
+            let remaining = deferred.split_off(take);
+            self.deferred = remaining;
+            let budget = 12 - take;
+            let received = self.results.try_iter().take(budget).collect::<Vec<_>>();
+            (deferred, received)
+        };
+        #[cfg(not(target_os = "android"))]
+        let (deferred, received) = {
+            let deferred = std::mem::take(&mut self.deferred);
+            let received = std::iter::from_fn(|| self.results.try_recv().ok()).collect::<Vec<_>>();
+            (deferred, received)
+        };
+        for done in deferred.into_iter().chain(received) {''')
 replace("        let workers = self.threads.len();",
 '''        let workers = self.threads.len();
         #[cfg(target_os = "android")]
@@ -81,4 +104,4 @@ replace('''            let Some(region) = Self::region(world, x, z) else {
 replace("            let mut wanted = Vec::new();",
         "            // Reserve the bounded in-flight batch before scanning candidates.\n            let mut wanted = Vec::with_capacity(capacity - input.generating.len());")
 p.write_text(s,encoding="utf-8")
-print("Android bounds completed-result buffering and queued lighting/mesh snapshots; at most 12 fresh results are applied per update. Deferred dirty work is retained, not dropped, preserving rendered content.")
+print("Android bounds completed-result buffering and queued lighting/mesh snapshots; at most 12 results are applied per update. Deferred dirty work is retained, not dropped, preserving rendered content.")
