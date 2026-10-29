@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v1.1.0 Low End: conservative Android-only frame budget and Minecraft-style launcher.
+"""v1.1.1 Low End: conservative Android-only frame budget and Minecraft-style launcher.
 Applied after the v1.0.0 overlay, touch and release-polish patches.
 """
 from pathlib import Path
@@ -43,6 +43,12 @@ replace(streaming, "let received = received.take(48).collect::<Vec<_>>();",
 # The touch overlay also rewrites button drawing. Do not patch its radius
 # using a fragile text anchor; retain the already-working Material You buttons.
 
+# Minecraft-like Material You button bevel; keeps original touch hitboxes.
+replace(pages, '    let padding = (w * 0.12).clamp(4.0, 12.0);',
+        '''    ui.rounded(x + 2.0, y + 1.0, (w - 4.0).max(0.0), 2.0, 0.0, color::HOVER);
+    ui.rounded(x + 2.0, y + h - 3.0, (w - 4.0).max(0.0), 2.0, 0.0, color::BG);
+    let padding = (w * 0.12).clamp(4.0, 12.0);''')
+
 # Pixel-inspired low-cost parallax bands on the launcher background.
 # All rectangles are drawn by the existing batcher; no image decode or
 # permanent panorama texture is needed on a 4 GB tablet.
@@ -52,10 +58,13 @@ replace(pages, '''        ui.batch
             .fill(&gui.atlas, 0.0, 0.0, w * scale, h * scale, color::BG);
         // Minecraft-inspired landscape silhouette: GPU-batched, zero textures.
         // Material You accent remains in the foreground controls.
+        static PANORAMA_START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+        let elapsed = PANORAMA_START.get_or_init(std::time::Instant::now).elapsed().as_secs_f32();
+        let drift = (elapsed * 0.17).sin() * (w * 0.022);
         ui.rounded(0.0, h * 0.69, w, h * 0.31, 0.0, color::RAISED);
         ui.rounded(0.0, h * 0.82, w, h * 0.18, 0.0, color::BG);
-        ui.rounded(w * 0.07, h * 0.60, w * 0.19, h * 0.22, 0.0, color::RAISED);
-        ui.rounded(w * 0.62, h * 0.64, w * 0.25, h * 0.18, 0.0, color::RAISED);
+        ui.rounded(w * 0.07 + drift, h * 0.60, w * 0.19, h * 0.22, 0.0, color::RAISED);
+        ui.rounded(w * 0.62 - drift, h * 0.64, w * 0.25, h * 0.18, 0.0, color::RAISED);
         ui.text(''')
 
 # Visible stage/byte progress in the native installer. A notification after
@@ -72,7 +81,7 @@ replace(pages, '"JAVA EDITION  /  ANDROID ARM64",',
         '"JAVA EDITION  /  LOW END v1.1",')
 
 # Keep package identifier and signing key unchanged across releases.
-replace("packaging/android/build.gradle", "versionCode 25", "versionCode 26")
-replace("packaging/android/build.gradle", "versionName '1.0.0'", "versionName '1.1.0'")
+replace("packaging/android/build.gradle", "versionCode 25", "versionCode 27")
+replace("packaging/android/build.gradle", "versionName '1.0.0'", "versionName '1.1.1'")
 
-print("Low End v1.1: Android chunk budget 16 normal / 32 initial load, Eco 4/4, balanced 7/5, existing Material You buttons, versionCode 26.")
+print("Low End v1.1: Android chunk budget 16 normal / 32 initial load, Eco 4/4, balanced 7/5, existing Material You buttons, versionCode 27.")
