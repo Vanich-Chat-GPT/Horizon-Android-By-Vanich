@@ -115,6 +115,15 @@ new = r'''        if page == Page::Play {
                 button(&mut ui, &mut self.targets,
                     [margin + card_w + gap, cards_y, card_w, card_h],
                     tr("Launch settings"), Action::Page(Page::Settings), false);
+                // Secondary card subtitles are purely descriptive; the same
+                // full-card tap targets remain fully functional.
+                ui.text(Face::Regular, 12.0, margin + 16.0,
+                    cards_y + 39.0, color::MUTED,
+                    &format!("Профиль {}", self.catalog.config.profile));
+                ui.text(Face::Regular, 12.0,
+                    margin + card_w + gap + 16.0,
+                    cards_y + 39.0, color::MUTED,
+                    "Настройки лаунчера");
             } else if h > 580.0 {
                 button(&mut ui, &mut self.targets,
                     [margin, cards_y, hero_w * 0.48, 45.0],
