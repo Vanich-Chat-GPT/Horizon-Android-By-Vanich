@@ -15,6 +15,14 @@ replace(friend,'label: if view.copied { "Copied" } else { "Copy Code" },','label
 multi="crates/horizon-client/src/multiplayer.rs"
 replace(multi,'centered(batch, "Join a Friend", 20.0, u32::MAX);','centered(batch, "Ввести код", 20.0, u32::MAX);')
 replace(multi,'                    "Invite Code",\n                    code,','                    "Код друга",\n                    code,')
+# Explain the existing network behavior in Russian rather than implying
+# that an invite code creates an internet relay automatically.
+replace(friend,
+'const HINT: &str = "Friends paste the code after the title screen\'s Friends button, in Direct Connection, or on the launcher\'s Play page.";',
+'const HINT: &str = "Друг вводит код в меню сетевой игры. Для игры через интернет может понадобиться VPN или настройка роутера.";')
+replace(friend,
+'            "Share this world behind an invite code: it opens to LAN, and friends on the internet join with the code. No server of ours is involved.",',
+'            "Открыть мир по коду: друзья в локальной сети смогут подключиться. Через интернет может понадобиться VPN или проброс порта.",')
 # Underlying code is validated by horizon_friends::invite::parse and the
 # existing real network connector; the short code requires a configured relay.
 print("Russian network code screens use existing working invite validation and transport.")
