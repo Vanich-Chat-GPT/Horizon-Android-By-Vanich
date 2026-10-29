@@ -57,6 +57,7 @@ jobs:
           python3 overlay/tools/apply_vanich_overlay.py upstream
           python3 overlay/tools/apply_touch_performance.py upstream
           python3 overlay/tools/apply_release_polish.py upstream
+          python3 overlay/tools/apply_low_end_update.py upstream
       - name: Validate patched sources
         run: |
           python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py
