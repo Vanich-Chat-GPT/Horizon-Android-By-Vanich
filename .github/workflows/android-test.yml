@@ -1,10 +1,15 @@
-name: Android test APK (no release)
+name: Build signed ARM64 APK and publish verified release
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/**'
+      - '.github/workflows/android-test.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android-arm64:
@@ -55,7 +60,7 @@ jobs:
           python3 overlay/tools/apply_low_end_update.py upstream
       - name: Validate patched sources
         run: |
-          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py
+          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py overlay/tools/apply_release_polish.py overlay/tools/apply_low_end_update.py
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           ET.parse('upstream/packaging/android/res/values/styles.xml')
@@ -94,7 +99,37 @@ jobs:
               assert so and all(s.startswith('lib/arm64-v8a/') for s in so), so
           print('ARM64 archive integrity passed:',p,p.stat().st_size,'bytes')
           PY
-      - name: Upload TEST artifact only; do not publish release
+      - name: Verify APK signature, version and certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -n 8
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "versionCode='27'.*versionName='1.1.1'"
+          mkdir -p dist
+          cp "$APK" dist/HorizonCraft-v1.1.1-android-arm64-signed.apk
+          (cd dist && sha256sum HorizonCraft-v1.1.1-android-arm64-signed.apk > SHA256SUMS.txt)
+      - name: Publish signed APK as GitHub Release only after successful verification
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v1.1.1-low-end
+          name: HorizonCraft v1.1.1 Low End — Android ARM64
+          draft: false
+          prerelease: true
+          target_commitish: ${{ github.sha }}
+          body: |
+            Signed native ARM64 APK, verified with Android apksigner and aapt.
+            Changes: Low End graphics presets, Android chunk frame budgets,
+            Minecraft-inspired Material You UI, launcher installation progress.
+            NOTE: Background downloading after the Android process exits is NOT
+            implemented. FPS/RAM gains have NOT been benchmarked on hardware.
+            Backup worlds before uninstalling an older differently signed APK.
+          files: |
+            dist/HorizonCraft-v1.1.1-android-arm64-signed.apk
+            dist/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+      - name: Upload signed build artifact
         uses: actions/upload-artifact@v4
         with:
           name: Horizon-Android-By-Vanich-TEST-arm64
