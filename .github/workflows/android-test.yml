@@ -108,10 +108,10 @@ jobs:
           APK="upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -n 8
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "versionCode='28'.*versionName='1.2.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "versionCode='29'.*versionName='1.3.0'"
           mkdir -p dist
-          cp "$APK" dist/HorizonCraft-v1.2.0-android-arm64-signed.apk
-          (cd dist && sha256sum HorizonCraft-v1.2.0-android-arm64-signed.apk > SHA256SUMS.txt)
+          cp "$APK" dist/HorizonCraft-v1.3.0-android-arm64-signed.apk
+          (cd dist && sha256sum HorizonCraft-v1.3.0-android-arm64-signed.apk > SHA256SUMS.txt)
       - name: Verify update compatibility with v1.1.1 signing identity
         shell: bash
         run: |
@@ -119,11 +119,31 @@ jobs:
           curl --fail --location --retry 3 \
             "https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/download/v1.1.1-low-end/HorizonCraft-v1.1.1-android-arm64-signed.apk" \
             --output previous.apk
-          APK="dist/HorizonCraft-v1.2.0-android-arm64-signed.apk"
+          APK="dist/HorizonCraft-v1.3.0-android-arm64-signed.apk"
           previous_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs previous.apk | grep 'Signer #1 certificate SHA-256 digest:' | head -1)
           current_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | grep 'Signer #1 certificate SHA-256 digest:' | head -1)
           test "$previous_cert" = "$current_cert"
           echo "Signature matches v1.1.1: Android in-place upgrade supported"
+      - name: Check certificate compatibility with original v1.0.0 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            "https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/download/v1.0.0-minecraft-java-android-native/Minecraft-Java-on-Android-Native-Horizon-by-Vanich-v1.0.0-arm64.apk" \
+            -o original.apk
+          APK="dist/HorizonCraft-v1.3.0-android-arm64-signed.apk"
+          original_package=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging original.apk | grep '^package:')
+          current_package=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep '^package:')
+          echo "$original_package"
+          echo "$current_package"
+          test "$(echo "$original_package" | sed -n "s/.*name='\([^']*\)'.*/\1/p")" = "$(echo "$current_package" | sed -n "s/.*name='\([^']*\)'.*/\1/p")"
+          original_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs original.apk | grep 'Signer #1 certificate SHA-256 digest:' | head -1)
+          current_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | grep 'Signer #1 certificate SHA-256 digest:' | head -1)
+          if [ "$original_cert" != "$current_cert" ]; then
+            echo "::warning::Original v1.0.0 used a different signing certificate; in-place upgrade from that APK is impossible with the current key."
+          else
+            echo "Original v1.0.0 certificate matches"
+          fi
       - name: Upload signed build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -135,8 +155,8 @@ jobs:
       - name: Publish signed APK as GitHub Release only after successful verification
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.2.0-r${{ github.run_number }}
-          name: HorizonCraft v1.2.0 · signed ARM64 APK · build #${{ github.run_number }}
+          tag_name: v1.3.0-r${{ github.run_number }}
+          name: HorizonCraft v1.3.0 · signed ARM64 APK · build #${{ github.run_number }}
           draft: false
           prerelease: false
           target_commitish: ${{ github.sha }}
@@ -150,6 +170,6 @@ jobs:
             guaranteed if Android kills the process. FPS/RAM gains remain unbenchmarked.
             Backup worlds before uninstalling an older differently signed APK.
           files: |
-            dist/HorizonCraft-v1.2.0-android-arm64-signed.apk
+            dist/HorizonCraft-v1.3.0-android-arm64-signed.apk
             dist/SHA256SUMS.txt
           fail_on_unmatched_files: true
