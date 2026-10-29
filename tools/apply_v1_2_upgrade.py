@@ -19,6 +19,23 @@ patch("crates/horizon-client/src/settings.rs",
                 "en_us"
             }.into(),''')
 
+# Limit simultaneous expensive Android generation jobs, not render distance.
+# This backpressure applies at scheduling, before the workers allocate world
+# generation scratch buffers. Completed chunks are NOT dropped.
+patch("crates/horizon-client/src/streaming.rs",
+      "        if let Some(wanted) = self.generation_scan.candidates(input, workers * 3) {",
+      """        // On memory-constrained Android, do not queue an ever-growing batch
+        // of generator work while the renderer processes previous results.
+        // This preserves visible chunk detail and only adjusts pacing.
+        let budget = if cfg!(target_os = "android") {
+            workers.saturating_mul(4).saturating_sub(self.generating.len())
+                .min(workers.saturating_mul(2))
+        } else {
+            workers * 3
+        };
+        if budget == 0 { return; }
+        if let Some(wanted) = self.generation_scan.candidates(input, budget) {""")
+
 # Show truthful, non-destructive quality controls: all pixels of the selected
 # preset are retained; queue pacing only changes when chunk results are handled.
 # The quality profile 100% stays available to users.
