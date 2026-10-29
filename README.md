@@ -1,141 +1,59 @@
-## HorizonCraft v1.3.0 — Classic launcher
+# ⛏️ HorizonCraft — Minecraft Java на Android
 
-[Скачать подписанный ARM64 APK v1.3.0](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/raw/refs/heads/apk-download/HorizonCraft-v1.3.0-android-arm64-signed.apk) · [SHA256](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/raw/refs/heads/apk-download/SHA256SUMS.txt)
+**HorizonCraft** — Android ARM64-приложение для запуска Minecraft Java Edition с сенсорным управлением, русскоязычным интерфейсом, игровыми профилями и настройками графики.
 
-Возвращены исходные цвета, кнопки и фон лаунчера вместо декоративного Minecraft-пейзажа. Убрана плавающая кнопка-палец и настройка сенсорного управления из лаунчера: редактор остался в игровых настройках. Сохранены русская локализация и ограничение одновременно генерируемых чанков на Android, уменьшающее пиковое давление на RAM. Реальные FPS и RAM ещё требуют замеров на устройстве.
+Проект ориентирован прежде всего на **Android 16 и устройства ARM64**, включая планшеты с ограниченным объёмом оперативной памяти. Работа на других версиях Android и с различными GPU-драйверами может отличаться.
 
-**Совместимость обновлений:** v1.3.0 — `dev.horizon.android`, `versionCode 29`, подписан тем же сертификатом, что и v1.1.1/v1.2.0. Проверка исходного v1.0.0 показала **другой сертификат**: Android не разрешит обновление напрямую с v1.0.0 без оригинального закрытого ключа подписи. **Не удаляйте старую версию до резервного копирования миров и настроек.**
+## 📥 Скачать APK
 
-[CI-сборка и проверки v1.3.0](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions/runs/40859884572) (компиляция, подпись, совместимость с v1.1.1 прошли; создание GitHub Release отклонено правами GitHub, APK доступен из ветки `apk-download`).
+**[Последний опубликованный подписанный релиз — v1.2.0](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.2.0-r29)**
 
----
+**[Скачать APK v1.2.0 напрямую](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/download/v1.2.0-r29/HorizonCraft-v1.2.0-android-arm64-signed.apk)** · [Контрольная сумма SHA-256](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/download/v1.2.0-r29/SHA256SUMS.txt)
 
-# ⛏️ HorizonCraft — Minecraft Java for Android by Vanich
-### Native Android ARM64 · Rust/Vulkan · Touch controls · Material You
+### Новая версия v1.3.1 — в разработке
 
-**Русский:** нативный клиент Minecraft Java Edition для Android ARM64 с сенсорным управлением, настраиваемыми графическими профилями и лаунчером в стиле Minecraft × Material You.
+[Проверить статус сборок v1.3.1](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions)
 
-**English:** Native Minecraft Java Edition experience on Android ARM64, powered by Horizon, with customizable touch controls, Material You styling and low-end graphics presets.
+Новая версия предусматривает интерфейс, ориентированный на предоставленный пользователем образец: тёмная тема, округлые вкладки, акцентные кнопки и крупная главная панель. Кнопки навигации, вход, установка ресурсов и выбор профиля используют реальные функции приложения. Редактор сенсорного управления открывается **в настройках самой игры**, а не отдельной плавающей кнопкой или пунктом лаунчера.
 
-[**📦 Скачать последний опубликованный APK — v1.2.0**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.2.0-r29) · [**Исходники**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich) · [**Тесты и ограничения**](docs/LOW_END_V1_1_PLAN.md)
+**v1.3.1 нельзя считать опубликованным релизом, пока подписанный APK не появится в разделе Releases и не пройдёт проверки.**
 
-> **Актуальный статус:** **v1.2.0-r29** опубликован как полный подписанный GitHub Release. В исходники добавлены Android foreground service для скачивания в фоне и уведомления о прогрессе/завершении, русский язык Minecraft по умолчанию, регулировка графики и ограничение генерации чанков. APK проверен по целостности, цифровой подписи и совпадению сертификата с v1.1.1. Фоновая загрузка и реальные FPS/RAM на физическом устройстве пока не проверены.
+## 🎮 Возможности
 
-## ✅ Доступно: HorizonCraft v1.2.0-r29
+- **Minecraft Java Edition:** запуск игры на Android ARM64, офлайн-профили и предусмотренная приложением авторизация.
+- **Русский язык:** локализация интерфейса лаунчера и русский язык Minecraft по умолчанию для нового профиля; сохранённый выбор языка пользователя не перезаписывается.
+- **Управление:** настройка сенсорных кнопок непосредственно внутри Minecraft, сохранение раскладки по профилям.
+- **Графика:** выбор профиля производительности, дистанции прорисовки и масштаба рендеринга.
+- **Ресурсы:** установка и проверка файлов игры с отображением прогресса; предусмотрен Android-сервис фоновой установки с уведомлениями.
+- **Моды, ресурспаки и шейдеры:** соответствующие разделы лаунчера, с учётом совместимости конкретного содержимого.
 
-В исходниках добавлены Android foreground-service для продолжения установки ресурсов при закрытом интерфейсе с уведомлением о скачанных мегабайтах и результате установки, русский язык игры `ru_ru` по умолчанию (выбор пользователя сохраняется), а также ограничение количества одновременно запланированных задач генерации чанков без снижения разрешения или текстур. APK собран и проверен на уровне Android-пакета. **Работа всех функций на физическом планшете ещё не подтверждена.** Android может остановить загрузку при принудительной остановке приложения или нехватке ресурсов.
+## ⚡ Память и плавность игры
 
-**Обновление без удаления APK:** версия `1.2.0` имеет `versionCode 28`, прежний applicationId и тот же настроенный ключ подписи. Процесс публикации проверяет, что SHA-256 сертификата APK совпадает с предыдущей v1.1.1. Резервное копирование миров всё равно рекомендуется.
+В исходниках есть адресные изменения, предназначенные для устройств с небольшим объёмом RAM:
 
-[Скачать подписанный APK v1.2.0](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/download/v1.2.0-r29/HorizonCraft-v1.2.0-android-arm64-signed.apk) · [Проверенная сборка №29](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions/runs/40853618551)
+- Ограничение числа одновременно запланированных задач генерации чанков на Android.
+- Ограничение числа результатов генерации, обрабатываемых за один кадр.
+- Более экономные графические профили с уменьшенной дальностью симуляции и прорисовки по выбору пользователя.
+- Возможность оставить качественный режим и высокое разрешение вместо принудительного снижения графики.
 
----
+Эти меры **направлены на уменьшение пиковых нагрузок и рывков**, но не гарантируют определённый FPS или объём занятой RAM. Численные результаты должны подтверждаться измерениями на реальном устройстве. Производительность зависит от мира, дистанции прорисовки, драйвера GPU и фоновых приложений.
 
-## ✨ Возможности опубликованного проекта
+## 📱 Установка и обновление
 
-- 🕹️ Сенсорное управление и редактор кнопок: перетаскивание, размер, прозрачность и переназначение.
-- 🎨 Material You и русскоязычный интерфейс; оформление Minecraft-подобными элементами.
-- ⚙️ Профили графики и настройки дальности прорисовки, рендера и симуляции.
-- 🚀 Нативная Android ARM64 сборка на базе Horizon Rust/Vulkan, без запуска Windows-эмулятора.
-- 🧱 В сборке v1.1.1: экономный профиль, ограничение обработки готовых чанков за кадр, лёгкий движущийся пиксельный фон и отображение прогресса установки.
+1. Скачайте APK из раздела **Releases**.
+2. Для обновления поверх существующей установки должны совпадать **имя пакета и сертификат подписи**, а `versionCode` нового APK должен быть выше.
+3. Для APK v1.1.1 и v1.2.0 использован совместимый сертификат. **У исходного v1.0.0 сертификат отличается**, поэтому прямое обновление с него Android отклонит.
+4. Перед любым удалением старого приложения **сделайте резервную копию миров, профилей и настроек**: удаление приложения может удалить локальные данные.
 
-## 📱 Установка
+Для v1.3.1 предусмотрены пакет `dev.horizon.android`, `versionCode 30` и постоянный ключ подписи. Совместимость обновления подтверждается только после проверки фактически собранного APK. Не следует удалять старую установку, пока не сохранены данные.
 
-Скачайте APK из **Releases**. Если требуется удалить прежнюю установку из-за подписи, сначала сохраните миры, профили и настройки — Android может удалить внутренние файлы приложения. APK v1.1.1 опубликован, но работа всех функций на физическом устройстве пока не подтверждена.
+## 🔍 Тестирование и обратная связь
 
-## 🔧 Проект и участие
+При сообщении об ошибке укажите модель устройства, версию Android, доступную RAM, используемый профиль графики, установленную версию приложения и текст ошибки. Особенно полезны замеры RAM, среднего FPS и времени кадров в одинаковом игровом мире.
 
-Этот репозиторий содержит патчи, применяемые поверх открытого исходного проекта [Vasysik/horizon-android](https://github.com/Vasysik/horizon-android). Для воспроизводимой новой сборки нужны исходный движок, Rust, Android NDK/SDK и Gradle. Результат должен пройти проверку ARM64, целостности APK, установки и фактической производительности. Пожалуйста, прикладывайте к баг-репортам модель устройства, версию Android и журнал ошибки.
+[Открыть Issues](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/issues) · [Посмотреть сборки](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions) · [Все релизы](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases)
 
-**Suggested GitHub About description:** Minecraft Java Edition for Android ARM64 · Native Horizon Rust/Vulkan client · Touch controls · Material You · Low-end performance presets
+## 📄 Исходный код и лицензии
 
-**Suggested GitHub topics:** `minecraft` `minecraft-java` `minecraft-android` `android` `arm64` `rust` `vulkan` `material-you` `touch-controls` `minecraft-launcher`
+Этот репозиторий содержит собственные изменения и скрипты сборки поверх открытой кодовой базы Horizon Android. Авторство стороннего исходного кода, уведомления об авторских правах и условия **GPL-3.0** сохраняются в соответствии с лицензией. Minecraft и связанные товарные знаки принадлежат их правообладателям; проект не является официальным приложением Mojang или Microsoft.
 
----
-
-
-> **📌 ЗАКРЕПЛЕНО / PINNED — Minecraft Java on Android Native v1.0.0**
->
-> **[Скачать полный релиз APK (Android ARM64)](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.2.0-r29)**
->
-> Если уже установлена старая версия, **сначала сделайте резервную копию миров и настроек**. Из-за различий подписи может потребоваться удалить старую версию перед установкой новой.
-
----
-
-## GitHub Topics / теги для поиска
-
-`minecraft` · `minecraft-java` · `minecraft-java-edition` · `minecraft-android` · `minecraft-launcher` · `android` · `android-16` · `arm64` · `native-android` · `rust` · `vulkan` · `wgpu` · `material-you` · `touch-controls` · `gaming` · `open-source` · `horizon-android` · `minecraft-client`
-
-**Описание для GitHub:** Native Minecraft Java Edition on Android ARM64 — Horizon Android by Vanich, Rust/Vulkan launcher with touch controls, Material You, Russian localization and performance settings.
-
-> Для отображения тегов в блоке **About** на GitHub владелец репозитория должен добавить их через значок ⚙️ рядом с About → Topics. GitHub Actions не имеет прав изменять Topics этого репозитория.
-
----
-
-# Minecraft Java on Android Native — Horizon Android by Vanich
-
-**Minecraft Java Edition on Android ARM64 — native Rust/Vulkan client.**
-
-**Полноценная версия 1.0 (сборка-кандидат):** [GitHub Releases](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases)
-
-> **Важное предупреждение об установке:** если новая APK не устанавливается поверх старой версии из-за несовпадения подписи, необходимо **сначала сохранить миры, профили и настройки**, затем удалить старую установку Horizon Android и установить новую APK. Удаление приложения может удалить его локальные данные. Не удаляйте старую версию до резервного копирования.
-
-### Управление и оформление
-
-- В игре в правом верхнем углу — кнопка с пальцем ☝, открывающая редактор сенсорных кнопок.
-- Перетаскивание, размер, прозрачность, добавление/удаление, назначение клавиш, видимость, сетка 2,5%, сохранение и сброс раскладки.
-- Material You: системный цвет обоев Android 12–16, скруглённые кнопки и анимированная подсветка нажатий. Пиксельный подзаголовок Java Edition в стиле Minecraft.
-- Русский язык расширен для настроек управления, подсказок лаунчера и выбора параметров. Часть системных и игровых строк по-прежнему может оставаться на английском.
-- Оптимизации чанков и графические профили предыдущих сборок сохранены.
-
-**Важно:** внешний вид редактора разработан для Horizon, а не скопирован из Minecraft Bedrock. Поддерживаются аналогичные базовые действия, но не гарантируется идентичность всех настроек и анимаций.
-
----
-
-> **📌 ЗАКРЕПЛЕНО / PINNED TEST BUILD — TOUCH + FPS**
->
-> [**Скачать последнюю тестовую сборку с настройкой кнопок и оптимизацией чанков**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/android-touch-fps-test-2026-10-29)
->
-> Предыдущая тестовая версия (Pre-release) сохранена для сравнения. Новая v1.0.0 — в закреплённой ссылке выше.
->
-> ---
-
-# Horizon Android by Vanich
-
-Native Android ARM64 Minecraft Rust client development, based on the Horizon Rust game engine (GPL-3.0).
-
-**Status: user-approved v1.0.0 full Release build in GitHub Actions; actual device testing still recommended.** This repository is a source *overlay*, not a second copy of the proprietary Minecraft game or a stand-alone playable game. The GitHub Actions workflow clones upstream, applies the overlay, downloads verified game metadata and compiles a native Android APK.
-
-## Implemented source changes
-
-- Russian and English native launcher labels, persistent language toggle and matching Minecraft `ru_ru` / `en_us` preference (existing user options are preserved until language is explicitly changed).
-- System Android Roboto font when it supports Cyrillic; fallback to bundled font.
-- Android Material You-inspired dark palette and round controls, with wallpaper-based Android system primary accent via JNI where supported.
-- Android 13–16 themed adaptive launcher icon with monochrome layer.
-- Real 40–100% native render surface scale, keeping a minimum menu size on very small displays.
-- Economy, Balanced and Quality graphics profiles that update the *real* `options.txt`: chunks, simulation distance, particles, clouds, quality, vsync and FPS cap; plus native render scale.
-- Touch layout and keyboard controls inherited from upstream's Android client; no Java emulation or placeholder launcher.
-- Strict ARM64 native library check, APK archive integrity validation and upstream APK signing verification.
-
-## Source architecture
-
-- `tools/apply_vanich_overlay.py` — reproducible source transformation applied to the upstream Android branch.
-- `.github/workflows/android-test.yml` — ARM64 source build on pushes to `main` or manual dispatch; uploads only an expiring **Actions artifact**, not a GitHub Release.
-- The source overlay uses Mojang's **SHA-1-verified pinned** Minecraft 26.3 manifest for resource preparation, rather than trusting a republished unverified manifest.
-- No game assets, account tokens, keystores, or generated Rust binaries are committed.
-
-## Testing and limitations
-
-Static source patch and formatting tests are separate from **on-device gameplay testing**. A CI success confirms compilation and APK structure; it does not by itself establish stable FPS, device driver compatibility, Cyrillic glyph coverage across every UI screen, or correctness of multiplayer on all Android 16 devices. More device testing is required.
-
-For game controls and launcher internals, follow upstream's `docs/android.md`. ARM64 Android 16 is the primary target; lower Android versions are not the primary compatibility target. Existing Horizon licensing applies. Only the repository owner authorizes any final release.
-
-## Touch customization and smooth chunk-loading test
-
-The Android build now applies `tools/apply_touch_performance.py` after the launcher overlay. This extends the **real in-game** touch editor: drag a control with a finger, select **Size** or **Opacity**, drag the slider, choose **Apply to all** when desired, optionally toggle **Grid 2.5%**, and press **Done**. **Cancel** restores the original layout. Settings are stored in `horizon-touch.json` per game profile. Original custom buttons remain supported; controls can be enlarged up to the updated supported bounds.
-
-Launcher Settings includes **Touch customization** as an entry-point hint, and **Graphics preset** adjusts actual Minecraft options. The Economy / Balanced / Quality presets select render scale 50% / 67% / 90%, render distance 5 / 8 / 12 chunks, simulation distance 5 / 6 / 8 chunks, and limit some expensive video effects. The Balanced mode uses a 90 FPS *cap*, not a performance guarantee.
-
-**Engine-level Android-specific frame pacing:** chunk streaming intake is bounded to 48 worker completions per update, rather than draining an arbitrarily large result queue in one frame. Jobs stay queued safely until a later update; this can improve frame-time stability at the cost of slower display of very distant chunks under heavy generation. Desktop keeps its original path. This is a targeted stutter mitigation, not a measured FPS result. Validate with real-world frame-time traces and memory measurements.
-
-No new GitHub Release is created automatically by this development overlay; APK builds are uploaded as temporary Actions artifacts for review first.
