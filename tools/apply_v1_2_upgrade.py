@@ -44,9 +44,9 @@ patch("packaging/android/AndroidManifest.xml",
       'android:label="Horizon Android"',
       'android:label="HorizonCraft"')
 # Increment APK version with persistent package ID and SAME signing key.
-patch("packaging/android/build.gradle","versionCode 27","versionCode 29")
-patch("packaging/android/build.gradle","versionName '1.1.1'","versionName '1.3.0'")
+patch("packaging/android/build.gradle","versionCode 27","versionCode 30")
+patch("packaging/android/build.gradle","versionName '1.1.1'","versionName '1.3.1'")
 patch("crates/horizon-client/src/android/launcher_pages.rs",
       '"JAVA EDITION  /  LOW END v1.1",',
       '"JAVA EDITION  /  CLASSIC ANDROID",')
-print("v1.3: classic launcher, in-game touch editor, ru_ru, versionCode 29")
+print("v1.3: classic launcher, in-game touch editor, ru_ru, versionCode 30")
