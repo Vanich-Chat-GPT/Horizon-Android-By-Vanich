@@ -66,9 +66,10 @@ jobs:
           python3 overlay/tools/apply_bounded_chunk_results.py upstream
           python3 overlay/tools/apply_joystick_modes.py upstream
           python3 overlay/tools/apply_friend_code_ru.py upstream
+          python3 overlay/tools/apply_v1_3_3_catalog.py upstream
       - name: Validate patched sources
         run: |
-          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py overlay/tools/apply_release_polish.py overlay/tools/apply_low_end_update.py overlay/tools/apply_background_install.py overlay/tools/apply_v1_2_upgrade.py overlay/tools/apply_screenshot_home.py overlay/tools/apply_bounded_chunk_results.py overlay/tools/apply_joystick_modes.py overlay/tools/apply_friend_code_ru.py
+          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py overlay/tools/apply_release_polish.py overlay/tools/apply_low_end_update.py overlay/tools/apply_background_install.py overlay/tools/apply_v1_2_upgrade.py overlay/tools/apply_screenshot_home.py overlay/tools/apply_bounded_chunk_results.py overlay/tools/apply_joystick_modes.py overlay/tools/apply_friend_code_ru.py overlay/tools/apply_v1_3_3_catalog.py
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           ET.parse('upstream/packaging/android/res/values/styles.xml')
@@ -114,10 +115,10 @@ jobs:
           APK="upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -n 8
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "versionCode='31'.*versionName='1.3.2'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "versionCode='33'.*versionName='1.3.2'"
           mkdir -p dist
-          cp "$APK" dist/HorizonCraft-v1.3.2-android-arm64-signed.apk
-          (cd dist && sha256sum HorizonCraft-v1.3.2-android-arm64-signed.apk > SHA256SUMS.txt)
+          cp "$APK" dist/HorizonCraft-v1.3.3-android-arm64-signed.apk
+          (cd dist && sha256sum HorizonCraft-v1.3.3-android-arm64-signed.apk > SHA256SUMS.txt)
       - name: Verify update compatibility with v1.1.1 signing identity
         shell: bash
         run: |
@@ -125,7 +126,7 @@ jobs:
           curl --fail --location --retry 3 \
             "https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/download/v1.1.1-low-end/HorizonCraft-v1.1.1-android-arm64-signed.apk" \
             --output previous.apk
-          APK="dist/HorizonCraft-v1.3.2-android-arm64-signed.apk"
+          APK="dist/HorizonCraft-v1.3.3-android-arm64-signed.apk"
           previous_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs previous.apk | grep 'Signer #1 certificate SHA-256 digest:' | head -1)
           current_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | grep 'Signer #1 certificate SHA-256 digest:' | head -1)
           test "$previous_cert" = "$current_cert"
@@ -137,7 +138,7 @@ jobs:
           curl --fail --location --retry 3 \
             "https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/download/v1.0.0-minecraft-java-android-native/Minecraft-Java-on-Android-Native-Horizon-by-Vanich-v1.0.0-arm64.apk" \
             -o original.apk
-          APK="dist/HorizonCraft-v1.3.2-android-arm64-signed.apk"
+          APK="dist/HorizonCraft-v1.3.3-android-arm64-signed.apk"
           original_package=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging original.apk | grep '^package:')
           current_package=$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep '^package:')
           echo "$original_package"
@@ -161,8 +162,8 @@ jobs:
       - name: Publish signed APK as GitHub Release only after successful verification
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v1.3.2-r${{ github.run_number }}
-          name: HorizonCraft v1.3.2 · signed ARM64 APK · build #${{ github.run_number }}
+          tag_name: v1.3.3-r${{ github.run_number }}
+          name: HorizonCraft v1.3.3 · signed ARM64 APK · build #${{ github.run_number }}
           draft: false
           prerelease: false
           target_commitish: ${{ github.sha }}
@@ -176,6 +177,6 @@ jobs:
             guaranteed if Android kills the process. FPS/RAM gains remain unbenchmarked.
             Backup worlds before uninstalling an older differently signed APK.
           files: |
-            dist/HorizonCraft-v1.3.2-android-arm64-signed.apk
+            dist/HorizonCraft-v1.3.3-android-arm64-signed.apk
             dist/SHA256SUMS.txt
           fail_on_unmatched_files: true
