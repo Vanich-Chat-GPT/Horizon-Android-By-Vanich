@@ -16,7 +16,7 @@ def replace(old,new):
         raise RuntimeError(f"launcher UI anchor count {n}: {old[:85]!r}")
     s=s.replace(old,new,1)
 
-# Screenshot-like pill navigation; native targets remain unchanged.
+# Screenshot-inspired pill navigation; native targets remain unchanged.
 replace('''        2.0,
         if accent { color::launcher_accent() } else { color::RAISED },
     );
