@@ -229,7 +229,23 @@ def patch_settings(source: str) -> str:
     )
     return source
 
+def patch_lod(source: str) -> str:
+    # Distant chunk summaries include 256 material columns plus reduced mip
+    # levels. Keep less of this optional cache on 4GB Android devices; desktop
+    # retains the upstream 1024-entry cache and all active LOD tiles stay intact.
+    return replace(
+        source,
+        "const CELLS: usize = 16;\\nconst MAX_SAVED: usize = 1024;",
+        """const CELLS: usize = 16;
+#[cfg(target_os = "android")]
+const MAX_SAVED: usize = 256;
+#[cfg(not(target_os = "android"))]
+const MAX_SAVED: usize = 1024;""",
+    )
+
+
 patch_file("crates/horizon-client/src/streaming.rs", patch_streaming)
 patch_file("crates/horizon-client/src/graphics.rs", patch_graphics)
 patch_file("crates/horizon-client/src/settings.rs", patch_settings)
-print("Applied bounded chunk streaming, Android reduced far LOD defaults, and a three-worker Android default.")
+patch_file("crates/horizon-client/src/lod.rs", patch_lod)
+print("Applied lower-allocation chunk scheduling and Android low-RAM LOD/cache defaults.")
