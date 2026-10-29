@@ -47,7 +47,6 @@ pages="crates/horizon-client/src/android/launcher_pages.rs"
 rewrite(pages,[
     ('&format!("Horizon Android {}", crate::backend::VERSION)',
      '&format!("HorizonCraft {}", crate::backend::VERSION)'),
-    ('"GitHub",\n            Action::Repository','"GitHub",\n            Action::Repository'),
 ])
 p=root/pages
 s=p.read_text(encoding="utf-8")
