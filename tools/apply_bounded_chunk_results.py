@@ -235,7 +235,7 @@ def patch_lod(source: str) -> str:
     # retains the upstream 1024-entry cache and all active LOD tiles stay intact.
     return replace(
         source,
-        "const CELLS: usize = 16;\\nconst MAX_SAVED: usize = 1024;",
+        "const CELLS: usize = 16;\nconst MAX_SAVED: usize = 1024;",
         """const CELLS: usize = 16;
 #[cfg(target_os = "android")]
 const MAX_SAVED: usize = 256;
