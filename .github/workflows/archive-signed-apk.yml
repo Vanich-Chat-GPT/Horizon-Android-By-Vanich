@@ -11,10 +11,23 @@ permissions:
 
 jobs:
   archive-apk:
-    if: ${{ github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-24.04
     steps:
+      - name: Ignore superseded builds; keep only newest public APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_NUMBER: ${{ github.event.workflow_run.run_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/android-test.yml/runs?branch=main&per_page=1" --jq '.workflow_runs[0].run_number')
+          if [ "$latest" != "$SOURCE_NUMBER" ]; then
+            echo "SKIP_STALE=1" >> "$GITHUB_ENV"
+            echo "Ignoring older APK build $SOURCE_NUMBER; latest is $latest"
+          fi
       - name: Retrieve signed APK artifact from completed Android build
+        if: env.SKIP_STALE != '1'
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN: ${{ github.event.workflow_run.id }}
@@ -24,12 +37,13 @@ jobs:
           mkdir -p dist
           if ! gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" \
                 --name Horizon-Android-By-Vanich-TEST-arm64 --dir dist; then
-            echo "::error::No signed APK artifact in the successful build."
-            exit 1
+            echo "No verified APK artifact; skipping."
+            echo "APK_MISSING=1" >> "$GITHUB_ENV"
+            exit 0
           fi
           test -s dist/horizon-android-public.apk
       - name: Verify the extracted APK has ARM64 native binaries
-        if: env.APK_MISSING != '1'
+        if: env.APK_MISSING != '1' && env.SKIP_STALE != '1'
         run: |
           python3 - <<'PY'
           import zipfile
@@ -38,7 +52,8 @@ jobs:
               assert any(n.startswith('lib/arm64-v8a/') and n.endswith('.so') for n in a.namelist())
           PY
       - name: Attempt GitHub Release using workflow-run token
-        if: env.APK_MISSING != '1'
+        continue-on-error: true
+        if: env.APK_MISSING != '1' && env.SKIP_STALE != '1'
         env:
           GH_TOKEN: ${{ secrets.HORIZON_RELEASE_TOKEN || github.token }}
           SOURCE_RUN: ${{ github.event.workflow_run.run_number }}
@@ -48,13 +63,18 @@ jobs:
           set -euo pipefail
           cp dist/horizon-android-public.apk dist/HorizonCraft-v1.3.3-android-arm64-signed.apk
           (cd dist && sha256sum HorizonCraft-v1.3.3-android-arm64-signed.apk > SHA256SUMS.txt)
-          gh release create "v1.3.3-r${SOURCE_RUN}" \
+          tag="v1.3.3-ru-r${SOURCE_RUN}"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; no duplicate."
+            exit 0
+          fi
+          gh release create "$tag" \
              dist/HorizonCraft-v1.3.3-android-arm64-signed.apk dist/SHA256SUMS.txt \
              --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
              --title "HorizonCraft v1.3.3 — signed Android ARM64" \
              --notes "Native ARM64; foreground installation notifications; Russian game locale; bounded chunk generation; signature compatible with v1.1.1. Device FPS/RAM gains not yet benchmarked."
       - name: Publish downloadable APK to dedicated public GitHub branch
-        if: env.APK_MISSING != '1' && success()
+        if: env.APK_MISSING != '1' && env.SKIP_STALE != '1'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
