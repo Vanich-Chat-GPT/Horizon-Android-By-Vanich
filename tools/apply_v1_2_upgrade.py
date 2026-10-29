@@ -44,6 +44,6 @@ patch("packaging/android/AndroidManifest.xml",
       'android:label="Horizon Android"',
       'android:label="HorizonCraft"')
 # Increment APK version with persistent package ID and SAME signing key.
-patch("packaging/android/build.gradle","versionCode 27","versionCode 33")
+patch("packaging/android/build.gradle","versionCode 27","versionCode 34")
 patch("packaging/android/build.gradle","versionName '1.1.1'","versionName '1.3.3'")
-print("v1.3.3: Russian game, bounded chunk work, versionCode 33")
+print("v1.3.3: Russian game, bounded chunk work, versionCode 34")
