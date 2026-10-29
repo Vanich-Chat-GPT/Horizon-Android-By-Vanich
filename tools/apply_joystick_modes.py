@@ -15,8 +15,8 @@ edit(layout,"            sprint_with_joystick: false,\n","            sprint_wit
 settings="crates/horizon-client/src/settings.rs"
 edit(settings,"    TouchSensitivity,\n    TouchButtonScale,","    TouchSensitivity,\n    TouchFloatingJoystick,\n    TouchButtonScale,")
 ui="crates/horizon-client/src/options_ui.rs"
-edit(ui,'            Opt::TouchSensitivity => "Touch sensitivity",','            Opt::TouchSensitivity => "Touch speed",\n            Opt::TouchFloatingJoystick => "Joystick: floating / fixed",')
-edit(ui,'            Opt::TouchAnalog => Some(if s.touch.analog_movement { "ON" } else { "OFF" }.into()),','            Opt::TouchAnalog => Some(if s.touch.analog_movement { "ON" } else { "OFF" }.into()),\n            Opt::TouchFloatingJoystick => Some(if s.touch.floating_joystick { "Floating" } else { "Fixed" }.into()),')
+edit(ui,'            Opt::TouchSensitivity => "Touch sensitivity",','            Opt::TouchSensitivity => "Скорость сенсорного управления",\n            Opt::TouchFloatingJoystick => "Тип джойстика",')
+edit(ui,'            Opt::TouchAnalog => Some(if s.touch.analog_movement { "ON" } else { "OFF" }.into()),','            Opt::TouchAnalog => Some(if s.touch.analog_movement { "ON" } else { "OFF" }.into()),\n            Opt::TouchFloatingJoystick => Some(if s.touch.floating_joystick { "Плавающий" } else { "Статичный" }.into()),')
 edit(ui,"            Opt::TouchAnalog => s.touch.analog_movement ^= true,","            Opt::TouchAnalog => s.touch.analog_movement ^= true,\n            Opt::TouchFloatingJoystick => s.touch.floating_joystick ^= true,")
 edit(ui,"                    Opt::TouchSensitivity,\n                    Opt::TouchButtonScale,","                    Opt::TouchSensitivity,\n                    Opt::TouchFloatingJoystick,\n                    Opt::TouchButtonScale,")
 touch="crates/horizon-client/src/touch.rs"
