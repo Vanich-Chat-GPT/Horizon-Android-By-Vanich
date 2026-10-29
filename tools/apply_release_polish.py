@@ -19,62 +19,6 @@ editor="crates/horizon-client/src/touch/editor.rs"
 pages="crates/horizon-client/src/android/launcher_pages.rs"
 catalog="crates/horizon-client/src/android/catalog.rs"
 
-# A small, finger-themed HUD shortcut inside gameplay, not an external
-# launcher control. It is handled BEFORE gameplay input and opens the real
-# built-in touch editor, preventing accidental mining when pressed.
-patch(game,
-    '''            self.pad.touch.draw(&mut hud, &self.gui.atlas);
-        }
-        #[cfg(target_os = "android")]
-        {
-            if (crate::touch_visible()''',
-    '''            self.pad.touch.draw(&mut hud, &self.gui.atlas);
-            if self.pad.touch.editor.is_none() && !self.pad_in_menu() {
-                // Dedicated touch-layout editor shortcut, safe above the HUD.
-                let x = hud.width * 0.88;
-                let y = hud.height * 0.025;
-                hud.fill(
-                    &self.gui.atlas,
-                    x, y,
-                    hud.width * 0.095,
-                    hud.height * 0.085,
-                    horizon_client::hud::rgba(24, 24, 32, 195),
-                );
-                hud.text(
-                    &self.gui.atlas,
-                    "☝",
-                    x + 8.0,
-                    y + 5.0,
-                    horizon_client::hud::rgba(250, 250, 250, 255),
-                    true,
-                );
-            }
-        }
-        #[cfg(target_os = "android")]
-        {
-            if (crate::touch_visible()''')
-patch(game,
-    '''            if self.pad.touch.editor.is_some() {
-                if touch.phase == TouchPhase::Cancelled {''',
-    '''            if self.pad.touch.editor.is_none()
-                && !self.pad_in_menu()
-                && crate::touch_visible()
-                && touch.phase == TouchPhase::Started
-                && (0.88..=0.975).contains(
-                    &(touch.location.x as f32 / size.width.max(1) as f32)
-                )
-                && (0.025..=0.11).contains(
-                    &(touch.location.y as f32 / size.height.max(1) as f32)
-                )
-            {
-                self.pad.touch.open_editor();
-                self.pad.touch.ignore(touch.id);
-                self.audio.play_button_click();
-                return;
-            }
-            if self.pad.touch.editor.is_some() {
-                if touch.phase == TouchPhase::Cancelled {''')
-
 # Extend Bedrock-style layout editing functionality while using Horizon's
 # own art and labels: touch/drag, size, opacity, key binding, add/remove,
 # visibility, reset, save/cancel, grid. Not a copy of Bedrock's assets.
