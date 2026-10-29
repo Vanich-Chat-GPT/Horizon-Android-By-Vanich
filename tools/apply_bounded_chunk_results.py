@@ -139,16 +139,19 @@ def patch_graphics(source: str) -> str:
                 g.far_detail = FarDetail::Reduced;
                 // Skip entities hidden by opaque terrain; this changes draw work, not visibility.
                 g.entity_culling = true;
-                if g.lod_distance == 0 {
-                    g.lod_distance = 32;
-                }
-                if g.workers == 0 {
-                    // Leave a CPU core for the renderer/server where possible.
-                    // Three workers are enough to overlap chunk work without
-                    // overcommitting memory bandwidth on a low-RAM mobile SoC.
-                    g.workers = std::thread::available_parallelism()
-                        .map_or(2, |n| n.get().saturating_sub(2).clamp(1, 3)) as u32;
-                }
+                g.lod_distance = if g.lod_distance == 0 {
+                    32
+                } else {
+                    g.lod_distance.min(32)
+                };
+                // Keep the render/server threads responsive on low-RAM mobile SoCs.
+                let auto_workers = std::thread::available_parallelism()
+                    .map_or(2, |n| n.get().saturating_sub(2).clamp(1, 3)) as u32;
+                g.workers = if g.workers == 0 {
+                    auto_workers
+                } else {
+                    g.workers.clamp(1, 3)
+                };
                 if fs::create_dir_all(dir).is_ok()
                     && fs::write(dir.join(FILE), g.serialize()).is_ok()
                 {
