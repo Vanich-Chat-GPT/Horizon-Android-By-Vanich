@@ -232,66 +232,17 @@ patch(chooser, '"Client resolution",\n                    "Small screens retain 
       'tr("Client resolution"),\n                    tr("Small screens retain a usable menu size."),')
 
 
-# Android 12–16 wallpaper-based Material You primary color.
-# The launcher remains a native Rust renderer; we query the system color once
-# through Android Context/Resources rather than using XML-only Material widgets.
+# Fixed violet launcher accent; no Material You wallpaper color lookup.
 patch("crates/horizon-client/src/ui_theme.rs",
       '    pub const ACCENT: u32 = hex(P.accent, 255);',
       '''    pub const ACCENT: u32 = hex(P.accent, 255);
-    static LAUNCHER_ACCENT: std::sync::atomic::AtomicU32 =
-        std::sync::atomic::AtomicU32::new(0);
-    pub fn set_launcher_accent(android_argb: u32) {
-        LAUNCHER_ACCENT.store(android_argb, std::sync::atomic::Ordering::Relaxed);
-    }
-    pub fn launcher_accent() -> u32 {
-        let android_argb = LAUNCHER_ACCENT.load(std::sync::atomic::Ordering::Relaxed);
-        if android_argb == 0 { ACCENT } else { hex(android_argb & 0x00ff_ffff, 255) }
-    }''')
-patch("crates/horizon-client/src/android/platform.rs",
-      'pub fn clipboard_get() -> Option<String> {',
-      '''pub fn system_material_accent() -> Option<u32> {
-    with_context(|env, activity| {
-        let res = env.call_method(
-            activity,
-            "getResources",
-            "()Landroid/content/res/Resources;",
-            &[],
-        )?.l()?;
-        let name = JObject::from(env.new_string("system_accent1_200")?);
-        let ty = JObject::from(env.new_string("color")?);
-        let package = JObject::from(env.new_string("android")?);
-        let id = env.call_method(
-            &res,
-            "getIdentifier",
-            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)I",
-            &[JValue::Object(&name), JValue::Object(&ty), JValue::Object(&package)],
-        )?.i()?;
-        if id == 0 {
-            return Ok(0u32);
-        }
-        Ok(env.call_method(
-            activity, "getColor", "(I)I", &[JValue::Int(id)],
-        )?.i()? as u32)
-    }).filter(|value| *value != 0)
-}
-
-pub fn clipboard_get() -> Option<String> {''')
-patch("crates/horizon-client/src/android/launcher.rs",
-      '        crate::platform::set_orientation(self.catalog.config.orientation);',
-      '''        if let Some(system_color) = crate::platform::system_material_accent() {
-            horizon_client::ui_theme::color::set_launcher_accent(system_color);
-        }
-        crate::platform::set_orientation(self.catalog.config.orientation);''')
-# Only Android launcher components use wallpaper accent; retain unchanged game UI.
-for path in (
-    "crates/horizon-client/src/android/launcher_pages.rs",
-    "crates/horizon-client/src/android/chooser.rs",
-    "crates/horizon-client/src/android/login.rs",
-):
+    pub fn launcher_accent() -> u32 { hex(0x9690ff, 255) }''')
+for path in ("crates/horizon-client/src/android/launcher_pages.rs",
+             "crates/horizon-client/src/android/chooser.rs",
+             "crates/horizon-client/src/android/login.rs"):
     file = ROOT / path
     source = file.read_text(encoding="utf-8")
     file.write_text(source.replace("color::ACCENT", "color::launcher_accent()"), encoding="utf-8")
-
 
 # Real device-oriented graphics profiles, backed by Minecraft options.txt and
 # the native render surface. Changing a profile never occurs silently at launch.
