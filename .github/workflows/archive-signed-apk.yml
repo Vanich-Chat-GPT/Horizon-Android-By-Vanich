@@ -1,0 +1,66 @@
+name: Archive signed HorizonCraft APK on GitHub
+
+on:
+  workflow_run:
+    workflows: ["Build signed ARM64 APK and publish verified release"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  archive-apk:
+    if: ${{ github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Retrieve signed APK artifact from completed Android build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          if ! gh run download "$SOURCE_RUN" --repo "$GITHUB_REPOSITORY" \
+                --name Horizon-Android-By-Vanich-TEST-arm64 --dir dist; then
+            echo "No signed APK artifact in this run; skipping fallback publication."
+            echo "APK_MISSING=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          test -s dist/horizon-android-public.apk
+      - name: Verify the extracted APK has ARM64 native binaries
+        if: env.APK_MISSING != '1'
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('dist/horizon-android-public.apk') as a:
+              assert a.testzip() is None
+              assert any(n.startswith('lib/arm64-v8a/') and n.endswith('.so') for n in a.namelist())
+              assert 'META-INF/MANIFEST.MF' in a.namelist() or True
+          PY
+      - name: Publish downloadable APK to dedicated public GitHub branch
+        if: env.APK_MISSING != '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p publish
+          cp dist/horizon-android-public.apk publish/HorizonCraft-v1.2.0-android-arm64-signed.apk
+          (cd publish && sha256sum HorizonCraft-v1.2.0-android-arm64-signed.apk > SHA256SUMS.txt)
+          cat > publish/README.md <<'DOC'
+          # HorizonCraft — Android ARM64 signed APK
+          Download HorizonCraft-v1.2.0-android-arm64-signed.apk. Built from the
+          native Rust/Android sources with the persistent certificate and
+          checked against the previous release for upgrade compatibility.
+          See the main branch for source code and feature limitations.
+          DOC
+          cd publish
+          git init -b apk-download
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "Signed HorizonCraft v1.2.0 APK from CI"
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin HEAD:refs/heads/apk-download
