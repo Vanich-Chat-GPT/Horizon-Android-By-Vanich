@@ -158,25 +158,3 @@ jobs:
           path: upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk
           if-no-files-found: error
           retention-days: 7
-
-      - name: Publish signed APK as GitHub Release only after successful verification
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: v1.3.3-r${{ github.run_number }}
-          name: HorizonCraft v1.3.3 · signed ARM64 APK · build #${{ github.run_number }}
-          draft: false
-          prerelease: false
-          target_commitish: ${{ github.sha }}
-          body: |
-            Signed native ARM64 APK, verified with Android apksigner and aapt.
-            Changes: Low End graphics presets, Android chunk frame budgets,
-            Minecraft-inspired Material You UI, launcher installation progress.
-            New: foreground Android installer service, progress notifications,
-            completion notifications, Minecraft ru_ru as default on Android.
-            Background operation does NOT survive force-stop and cannot be
-            guaranteed if Android kills the process. FPS/RAM gains remain unbenchmarked.
-            Backup worlds before uninstalling an older differently signed APK.
-          files: |
-            dist/HorizonCraft-v1.3.3-android-arm64-signed.apk
-            dist/SHA256SUMS.txt
-          fail_on_unmatched_files: true
