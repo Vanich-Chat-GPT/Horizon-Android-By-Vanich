@@ -89,34 +89,11 @@ replace(editor,
             plate(b, a, [0.32, 0.88, 0.36, 0.07], "Remove button", false);''')
 
 # Chunk spikes are more often limited by CPU/memory than fragment shader FPS.
-# Performance profiles should also control CPU-heavy options. Avoid spawning
-# extra threads or raising unbounded task queues on 4 GB devices.
-replace(pages,
-        '''                let (scale, chunks, simulation, max_fps, fancy) = match next {
-                    QualityPreset::Eco => (50, 6, 5, 60, false),
-                    QualityPreset::Balanced => (75, 9, 7, 60, false),
-                    QualityPreset::Quality => (100, 14, 10, 90, true),
-                };''',
-        '''                let (scale, chunks, simulation, max_fps, fancy) = match next {
-                    QualityPreset::Eco => (50, 5, 5, 60, false),
-                    QualityPreset::Balanced => (67, 8, 6, 90, false),
-                    QualityPreset::Quality => (90, 12, 8, 120, true),
-                };''')
-replace(pages,
-        '''                settings.biome_blend = if fancy { 2 } else { 0 };
-                settings.save(&path);''',
-        '''                settings.biome_blend = if fancy { 2 } else { 0 };
-                // Reduces CPU work and chunk fade allocations during traversal.
-                settings.entity_distance = if fancy { 1.0 } else { 0.65 };
-                settings.chunk_fade = if fancy { 0.35 } else { 0.0 };
-                settings.weather_radius = if fancy { 8 } else { 4 };
-                settings.menu_blur = if fancy { 3 } else { 0 };
-                settings.vignette = fancy;
-                settings.prioritize_chunk_updates = 1;
-                settings.save(&path);''')
+# Preserve upstream graphics presets and render-affecting options verbatim.
+
 # The upstream game thread currently drains and allocates *all* completed
 # streaming jobs every update, then performs each lighting/mesh/world mutation
-# in the same frame. Limit Android intake to bound per-frame work.
+# in the same frame. Limit Android intake to at most 12 fresh results per frame.
 # Queue ownership stays with mpsc, so unprocessed results persist safely until
 # the next update. Desktop is unaffected.
 replace("crates/horizon-client/src/streaming.rs",
@@ -126,7 +103,7 @@ replace("crates/horizon-client/src/streaming.rs",
         // Avoid a frame-time spike when many completed chunk meshes, lighting
         // jobs and generated columns arrive at once on mobile CPUs.
         #[cfg(target_os = "android")]
-        let received = received.take(48).collect::<Vec<_>>();
+        let received = received.take(12).collect::<Vec<_>>();
         #[cfg(not(target_os = "android"))]
         let received = received.collect::<Vec<_>>();
         for done in deferred.into_iter().chain(received) {''')
