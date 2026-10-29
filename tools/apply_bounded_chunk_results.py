@@ -101,6 +101,14 @@ replace('''            let Some(region) = Self::region(world, x, z) else {
             };''')
 # Reserve only the bounded number of candidate jobs before sorting and truncating.
 # This avoids geometric Vec growth during wide render-distance scans.
+replace('''        let candidates: Vec<(i32, i32)> = self.protos.keys().copied().collect();''',
+'''        // Avoid allocating a coordinate entry for every cached proto chunk on
+        // every update. Only nearby protos can be finalized this tick; distant
+        // entries remain cached and are handled by the existing unload sweep.
+        let candidates: Vec<(i32, i32)> = self.protos.keys()
+            .filter(|&&(x, z)| self.in_range(x, z, 1))
+            .copied()
+            .collect();''')
 replace("            let mut wanted = Vec::new();",
         "            // Reserve the bounded in-flight batch before scanning candidates.\n            let mut wanted = Vec::with_capacity(capacity - input.generating.len());")
 p.write_text(s,encoding="utf-8")
