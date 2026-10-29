@@ -51,8 +51,6 @@ replace(pages, '''        (h * 0.5).min(26.0),
 
 # Make the home headline distinguish the update without changing Minecraft
 # gameplay strings or loading third-party game art.
-replace(pages, 'tr("Minecraft Java on Android Native")',
-        'tr("Minecraft Java on Android Native")')
 replace(pages, '"JAVA EDITION  /  ANDROID ARM64",',
         '"JAVA EDITION  /  LOW END v1.1",')
 
