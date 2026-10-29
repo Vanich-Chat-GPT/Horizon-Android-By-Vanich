@@ -37,6 +37,33 @@ replace(streaming, "let received = received.take(48).collect::<Vec<_>>();",
 # Preserve the existing tested Material You launcher controls; visual redesign
 # will be implemented independently after the Low End build passes CI.
 
+# Minecraft-style squared buttons with a restrained Material You bevel.
+# Applied after the earlier rounded-pill overlay. The highlight uses existing
+# palette constants and does not allocate textures or alter touch hitboxes.
+replace(pages, '''        (h * 0.5).min(26.0),
+        if accent { color::ACCENT } else { color::RAISED },
+    );
+    let padding''', '''        3.0,
+        if accent { color::ACCENT } else { color::RAISED },
+    );
+    ui.rounded(x + 3.0, y + 2.0, (w - 6.0).max(0.0), 2.0, 0.0, color::HOVER);
+    let padding''')
+
+# Pixel-inspired low-cost parallax bands on the launcher background.
+# All rectangles are drawn by the existing batcher; no image decode or
+# permanent panorama texture is needed on a 4 GB tablet.
+replace(pages, '''        ui.batch
+            .fill(&gui.atlas, 0.0, 0.0, w * scale, h * scale, color::BG);
+        ui.text(''', '''        ui.batch
+            .fill(&gui.atlas, 0.0, 0.0, w * scale, h * scale, color::BG);
+        // Minecraft-inspired landscape silhouette: GPU-batched, zero textures.
+        // Material You accent remains in the foreground controls.
+        ui.rounded(0.0, h * 0.69, w, h * 0.31, 0.0, color::RAISED);
+        ui.rounded(0.0, h * 0.82, w, h * 0.18, 0.0, color::BG);
+        ui.rounded(w * 0.07, h * 0.60, w * 0.19, h * 0.22, 0.0, color::RAISED);
+        ui.rounded(w * 0.62, h * 0.64, w * 0.25, h * 0.18, 0.0, color::RAISED);
+        ui.text(''')
+
 # Make the home headline distinguish the update without changing Minecraft
 # gameplay strings or loading third-party game art.
 replace(pages, '"JAVA EDITION  /  ANDROID ARM64",',
