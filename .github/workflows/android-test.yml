@@ -61,9 +61,10 @@ jobs:
           python3 overlay/tools/apply_background_install.py upstream
           python3 overlay/tools/apply_v1_2_upgrade.py upstream
           python3 overlay/tools/apply_screenshot_home.py upstream
+          python3 overlay/tools/apply_bounded_chunk_results.py upstream
       - name: Validate patched sources
         run: |
-          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py overlay/tools/apply_release_polish.py overlay/tools/apply_low_end_update.py overlay/tools/apply_background_install.py overlay/tools/apply_v1_2_upgrade.py overlay/tools/apply_screenshot_home.py
+          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py overlay/tools/apply_release_polish.py overlay/tools/apply_low_end_update.py overlay/tools/apply_background_install.py overlay/tools/apply_v1_2_upgrade.py overlay/tools/apply_screenshot_home.py overlay/tools/apply_bounded_chunk_results.py
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           ET.parse('upstream/packaging/android/res/values/styles.xml')
