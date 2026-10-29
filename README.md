@@ -1,3 +1,15 @@
+## HorizonCraft v1.3.0 — Classic launcher
+
+[Скачать подписанный ARM64 APK v1.3.0](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/raw/refs/heads/apk-download/HorizonCraft-v1.3.0-android-arm64-signed.apk) · [SHA256](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/raw/refs/heads/apk-download/SHA256SUMS.txt)
+
+Возвращены исходные цвета, кнопки и фон лаунчера вместо декоративного Minecraft-пейзажа. Убрана плавающая кнопка-палец и настройка сенсорного управления из лаунчера: редактор остался в игровых настройках. Сохранены русская локализация и ограничение одновременно генерируемых чанков на Android, уменьшающее пиковое давление на RAM. Реальные FPS и RAM ещё требуют замеров на устройстве.
+
+**Совместимость обновлений:** v1.3.0 — `dev.horizon.android`, `versionCode 29`, подписан тем же сертификатом, что и v1.1.1/v1.2.0. Проверка исходного v1.0.0 показала **другой сертификат**: Android не разрешит обновление напрямую с v1.0.0 без оригинального закрытого ключа подписи. **Не удаляйте старую версию до резервного копирования миров и настроек.**
+
+[CI-сборка и проверки v1.3.0](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions/runs/40859884572) (компиляция, подпись, совместимость с v1.1.1 прошли; создание GitHub Release отклонено правами GitHub, APK доступен из ветки `apk-download`).
+
+---
+
 # ⛏️ HorizonCraft — Minecraft Java for Android by Vanich
 ### Native Android ARM64 · Rust/Vulkan · Touch controls · Material You
 
