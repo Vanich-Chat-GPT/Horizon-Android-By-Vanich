@@ -37,7 +37,6 @@ jobs:
           with zipfile.ZipFile('dist/horizon-android-public.apk') as a:
               assert a.testzip() is None
               assert any(n.startswith('lib/arm64-v8a/') and n.endswith('.so') for n in a.namelist())
-              assert 'META-INF/MANIFEST.MF' in a.namelist() or True
           PY
       - name: Publish downloadable APK to dedicated public GitHub branch
         if: env.APK_MISSING != '1'
