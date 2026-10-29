@@ -18,21 +18,8 @@ pages = "crates/horizon-client/src/android/launcher_pages.rs"
 catalog = "crates/horizon-client/src/android/catalog.rs"
 streaming = "crates/horizon-client/src/streaming.rs"
 
-# Lower-end profile: bound the expensive view/simulation radius and reduce
-# GPU render target area. No claims of a guaranteed FPS or RAM percentage.
-replace(pages, "QualityPreset::Eco => (50, 5, 5, 60, false),",
-        "QualityPreset::Eco => (50, 4, 4, 60, false),")
-replace(pages, "QualityPreset::Balanced => (67, 8, 6, 90, false),",
-        "QualityPreset::Balanced => (67, 7, 5, 90, false),")
-replace(pages, "settings.entity_distance = if fancy { 1.0 } else { 0.65 };",
-        "settings.entity_distance = if fancy { 1.0 } else if matches!(next, QualityPreset::Eco) { 0.5 } else { 0.65 };")
-replace(pages, "settings.weather_radius = if fancy { 8 } else { 4 };",
-        "settings.weather_radius = if fancy { 8 } else if matches!(next, QualityPreset::Eco) { 2 } else { 4 };")
-
-# A stricter frame-time budget on Android; the receiver retains queued
-# results instead of discarding them. This may delay chunk appearance.
-replace(streaming, "let received = received.take(48).collect::<Vec<_>>();",
-        "let received = received.take(if self.loading { 32 } else { 16 }).collect::<Vec<_>>();")
+# Preserve all in-game render-affecting settings and the bounded streaming budget
+# from the dedicated streaming patch. This script must not alter visual output.
 
 # Preserve the existing tested Material You launcher controls; visual redesign
 # will be implemented independently after the Low End build passes CI.
