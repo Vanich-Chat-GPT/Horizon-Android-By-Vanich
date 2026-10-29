@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   archive-apk:
-    if: ${{ github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Retrieve signed APK artifact from completed Android build
