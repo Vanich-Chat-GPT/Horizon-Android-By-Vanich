@@ -47,5 +47,34 @@ replace('''                            if send.send(done).is_err() {
                                     }
                                 }
                             }''')
+# Keep queued lighting/mesh snapshots bounded on Android. When the queue
+# is full, leave dirty work marked in World so a later update can schedule it;
+# never discard chunks, lighting changes, or meshes.
+replace("        let workers = self.threads.len();",
+'''        let workers = self.threads.len();
+        #[cfg(target_os = "android")]
+        let queue_limit = workers.saturating_mul(8).saturating_add(32);''')
+replace('''        for (x, z) in light {
+            if !world.chunks.contains_key(&(x, z)) {''',
+'''        for (x, z) in light {
+            #[cfg(target_os = "android")]
+            if self.shared.queue.lock().unwrap().len() >= queue_limit {
+                // Keep this key in dirty_light; it will be retried next update.
+                continue;
+            }
+            if !world.chunks.contains_key(&(x, z)) {''')
+replace('''            let Some(region) = Self::region(world, x, z) else {
+                continue;
+            };''',
+'''            // Do not enqueue more section meshes than the worker pool can
+            // reasonably drain. Leave dirty_sections untouched for a later
+            // update, preserving the exact rendered geometry and block data.
+            #[cfg(target_os = "android")]
+            if self.shared.queue.lock().unwrap().len().saturating_add(section_indexes(sections).count()) > queue_limit {
+                continue;
+            }
+            let Some(region) = Self::region(world, x, z) else {
+                continue;
+            };''')
 p.write_text(s,encoding="utf-8")
-print("Android completed chunk queue limited to 16; at most 12 fresh results are applied per frame to reduce RAM spikes and frame-time spikes. Results are retained, not dropped.")
+print("Android bounds completed-result buffering and queued lighting/mesh snapshots; at most 12 fresh results are applied per update. Deferred dirty work is retained, not dropped, preserving rendered content.")
