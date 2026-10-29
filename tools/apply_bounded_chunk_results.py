@@ -226,13 +226,13 @@ def patch_graphics(source: str) -> str:
             if !marker.exists() {
                 g.far_detail = FarDetail::Reduced;
                 if g.lod_distance == 0 {
-                    g.lod_distance = 64;
+                    g.lod_distance = 32;
                 }
                 if g.workers == 0 {
                     // Leave a CPU core for the renderer/server where possible.
                     // Three workers are enough to overlap chunk work without
                     // overcommitting memory bandwidth on a low-RAM mobile SoC.
-                    g.workers = 3;
+                    g.workers = std::thread::available_parallelism()\n                        .map_or(2, |n| n.get().saturating_sub(2).clamp(1, 3)) as u32;
                 }
                 if fs::create_dir_all(dir).is_ok()
                     && fs::write(dir.join(FILE), g.serialize()).is_ok()
@@ -246,6 +246,73 @@ def patch_graphics(source: str) -> str:
     return source
 
 
+
+def patch_settings(source: str) -> str:
+    # One-time migration on Android only. Fewer fully resident chunks lower
+    # chunk/mesh memory and simulation load; far LOD supplies a cheaper horizon.
+    # Existing values that are already lower are preserved.
+    source = replace(
+        source,
+        """        let settings = match fs::read(path) {
+            Ok(bytes) => Self {
+                horizon,
+                controller,
+                touch,
+                keypad,
+                extras,
+                mods,
+                ..Self::parse(&String::from_utf8_lossy(&bytes))
+            },
+            Err(_) => Self {
+                horizon,
+                controller,
+                touch,
+                keypad,
+                extras,
+                mods,
+                ..Self::default()
+            },
+        };
+        settings.describe_for_crashes();
+        settings""",
+        """        let mut settings = match fs::read(path) {
+            Ok(bytes) => Self {
+                horizon,
+                controller,
+                touch,
+                keypad,
+                extras,
+                mods,
+                ..Self::parse(&String::from_utf8_lossy(&bytes))
+            },
+            Err(_) => Self {
+                horizon,
+                controller,
+                touch,
+                keypad,
+                extras,
+                mods,
+                ..Self::default()
+            },
+        };
+        #[cfg(target_os = "android")]
+        if let Some(dir) = path.parent() {
+            let marker = dir.join(".horizon-android-game-options-v1");
+            if !marker.exists() {
+                settings.render_distance = settings.render_distance.min(8);
+                settings.simulation_distance = settings.simulation_distance.min(6);
+                settings.save(path);
+                if fs::read(path).is_ok() {
+                    let _ = fs::write(marker, b"1\\n");
+                }
+            }
+        }
+        settings.describe_for_crashes();
+        settings""",
+    )
+    return source
+
 patch_file("crates/horizon-client/src/streaming.rs", patch_streaming)
 patch_file("crates/horizon-client/src/graphics.rs", patch_graphics)
+patch_file("crates/horizon-client/src/settings.rs", patch_settings)
 print("Applied bounded chunk streaming, Android reduced far LOD defaults, and a three-worker Android default.")
