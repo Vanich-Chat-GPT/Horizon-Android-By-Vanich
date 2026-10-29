@@ -124,6 +124,14 @@ jobs:
           current_cert=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$APK" | grep 'Signer #1 certificate SHA-256 digest:' | head -1)
           test "$previous_cert" = "$current_cert"
           echo "Signature matches v1.1.1: Android in-place upgrade supported"
+      - name: Upload signed build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Horizon-Android-By-Vanich-TEST-arm64
+          path: upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Publish signed APK as GitHub Release only after successful verification
         uses: softprops/action-gh-release@v3
         with:
@@ -145,10 +153,3 @@ jobs:
             dist/HorizonCraft-v1.2.0-android-arm64-signed.apk
             dist/SHA256SUMS.txt
           fail_on_unmatched_files: true
-      - name: Upload signed build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Horizon-Android-By-Vanich-TEST-arm64
-          path: upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk
-          if-no-files-found: error
-          retention-days: 7
