@@ -40,9 +40,8 @@ replace(streaming, "let received = received.take(48).collect::<Vec<_>>();",
 # Minecraft-style squared buttons with a restrained Material You bevel.
 # Applied after the earlier rounded-pill overlay. The highlight uses existing
 # palette constants and does not allocate textures or alter touch hitboxes.
-replace(pages, '''        (h * 0.5).min(26.0),
-        if accent { color::ACCENT } else { color::RAISED },''', '''        3.0,
-        if accent { color::ACCENT } else { color::RAISED },''')
+# The touch overlay also rewrites button drawing. Do not patch its radius
+# using a fragile text anchor; retain the already-working Material You buttons.
 
 # Pixel-inspired low-cost parallax bands on the launcher background.
 # All rectangles are drawn by the existing batcher; no image decode or
