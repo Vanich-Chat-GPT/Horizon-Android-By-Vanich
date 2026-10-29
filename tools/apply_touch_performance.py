@@ -91,21 +91,7 @@ replace(editor,
 # Chunk spikes are more often limited by CPU/memory than fragment shader FPS.
 # Preserve upstream graphics presets and render-affecting options verbatim.
 
-# The upstream game thread currently drains and allocates *all* completed
-# streaming jobs every update, then performs each lighting/mesh/world mutation
-# in the same frame. Limit Android intake to at most 12 fresh results per frame.
-# Queue ownership stays with mpsc, so unprocessed results persist safely until
-# the next update. Desktop is unaffected.
-replace("crates/horizon-client/src/streaming.rs",
-        '''        let received = std::iter::from_fn(|| self.results.try_recv().ok());
-        for done in deferred.into_iter().chain(received.collect::<Vec<_>>()) {''',
-        '''        let received = std::iter::from_fn(|| self.results.try_recv().ok());
-        // Avoid a frame-time spike when many completed chunk meshes, lighting
-        // jobs and generated columns arrive at once on mobile CPUs.
-        #[cfg(target_os = "android")]
-        let received = received.take(12).collect::<Vec<_>>();
-        #[cfg(not(target_os = "android"))]
-        let received = received.collect::<Vec<_>>();
-        for done in deferred.into_iter().chain(received) {''')
+# Streaming result budgeting is owned by apply_bounded_chunk_results.py, applied later
+# in the workflow. Keep all rendering options unchanged.
 
 print("Native touch editor and graphics/streaming controls patched.")
