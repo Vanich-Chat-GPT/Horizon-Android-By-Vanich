@@ -152,5 +152,48 @@ s = s.replace(old, '''        (h * 0.5).min(25.0),
         else { horizon_client::hud::rgba(33, 40, 68, 255) },
     );
     let padding =''', 1)
+# Give the header the same three-part hierarchy as the supplied reference:
+# block icon, large product name, and small Russian subtitle.
+header = '''        ui.text(
+            Face::Medium,
+            if w < 400.0 {'''
+if s.count(header) != 1:
+    raise RuntimeError("Native header anchor changed")
+s = s.replace(header, '''        if w >= 700.0 {
+            ui.rounded(32.0, 22.0, 58.0, 58.0, 10.0,
+                horizon_client::hud::rgba(108, 82, 54, 255));
+            ui.rounded(32.0, 22.0, 58.0, 21.0, 7.0,
+                horizon_client::hud::rgba(91, 161, 70, 255));
+            ui.rounded(40.0, 25.0, 17.0, 9.0, 2.0,
+                horizon_client::hud::rgba(131, 193, 85, 255));
+        }
+        ui.text(
+            Face::Medium,
+            if w < 400.0 {''', 1)
+old_x = '''            32.0,
+            if w < 700.0 { 12.0 } else { 28.0 },
+            color::TEXT,
+            &format!("Horizon Android {}", crate::backend::VERSION),
+        );'''
+if s.count(old_x) != 1:
+    raise RuntimeError("Native header title anchor changed")
+s = s.replace(old_x, '''            if w >= 700.0 { 110.0 } else { 32.0 },
+            if w < 700.0 { 12.0 } else { 20.0 },
+            color::TEXT,
+            &format!("Horizon Android {}", crate::backend::VERSION),
+        );
+        if w >= 700.0 {
+            ui.text(Face::Regular, 14.0, 110.0, 63.0,
+                color::MUTED, tr("The best launcher for Minecraft Java"));
+        }''', 1)
+# Ensure translation is available without loading a new font each frame.
+catalog = root / "crates/horizon-client/src/android/catalog.rs"
+c = catalog.read_text(encoding="utf-8")
+anchor = '        "On" => "Вкл.",'
+if c.count(anchor) != 1:
+    raise RuntimeError("Translation catalog anchor changed")
+c = c.replace(anchor,
+    '        "The best launcher for Minecraft Java" => "Лучший лаунчер для Minecraft Java",\n' + anchor, 1)
+catalog.write_text(c, encoding="utf-8")
 p.write_text(s, encoding="utf-8")
 print("Rebuilt functional home layout: no text collisions, actual progress and action cards.")
