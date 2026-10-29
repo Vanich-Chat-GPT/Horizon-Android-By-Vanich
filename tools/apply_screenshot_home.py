@@ -44,7 +44,7 @@ replace('''        if page == Page::Play {
             // Decorative layers render behind the existing functional home
             // controls; no extra tap targets or allocations.
             if w >= 700.0 && h >= 500.0 {
-                let hero_h = (h - 290.0).max(215.0);
+                let hero_h = (h - 350.0).max(215.0);
                 ui.rounded(24.0, 148.0, w - 48.0, hero_h, 22.0, color::RAISED);
                 ui.rounded(w * 0.62, 148.0, w * 0.38 - 24.0, hero_h,
                     22.0, color::HOVER);
@@ -63,6 +63,28 @@ replace('''            let top = 160.0;
             ui.text(''',
 '''            let top = if w >= 700.0 { 174.0 } else { 160.0 };
             ui.text(''')
+
+# Profile selection and settings tiles shown in the provided screenshot.
+# Both invoke existing native actions and retain real touch hit targets.
+replace("""                    Action::Play,
+                    true,
+                );
+            }
+        } else if page.is_catalog() {""",
+"""                    Action::Play,
+                    true,
+                );
+                if w >= 700.0 && h >= 690.0 {
+                    let card_w = (w - 76.0) * 0.5;
+                    button(&mut ui, &mut self.targets,
+                        [24.0, h - 203.0, card_w, 68.0],
+                        tr("Choose profile"), Action::Profile, false);
+                    button(&mut ui, &mut self.targets,
+                        [52.0 + card_w, h - 203.0, card_w, 68.0],
+                        tr("Launch settings"), Action::Page(Page::Settings), false);
+                }
+            }
+        } else if page.is_catalog() {""")
 p.write_text(s,encoding="utf-8")
 catalog = root / "crates/horizon-client/src/android/catalog.rs"
 c=catalog.read_text(encoding="utf-8")
