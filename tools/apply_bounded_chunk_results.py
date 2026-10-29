@@ -18,7 +18,7 @@ replace("        let (send, results) = mpsc::channel();",
 '''        // Keep expensive completed meshes and chunk snapshots from piling up
         // on mobile devices if generation outruns the renderer.
         #[cfg(target_os = "android")]
-        let (send, results) = mpsc::sync_channel(32);
+        let (send, results) = mpsc::sync_channel(16);
         #[cfg(not(target_os = "android"))]
         let (send, results) = mpsc::channel();''')
 replace('''                            if send.send(done).is_err() {
@@ -48,4 +48,4 @@ replace('''                            if send.send(done).is_err() {
                                 }
                             }''')
 p.write_text(s,encoding="utf-8")
-print("Android completed chunk queue limited to 32, with shutdown-safe sender retries.")
+print("Android completed chunk queue limited to 16; at most 12 fresh results are applied per frame to reduce RAM spikes and frame-time spikes. Results are retained, not dropped.")
