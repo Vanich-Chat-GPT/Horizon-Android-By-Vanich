@@ -28,4 +28,30 @@ new='''        // Bundled visual from the user's supplied reference; a tiny stat
             atlas: HudAtlas::build(&self.home.join("installer"))?,'''
 if s.count(old)!=1: raise RuntimeError(f"launcher image load anchor mismatch: {s.count(old)}")
 launcher.write_text(s.replace(old,new,1),encoding="utf-8")
-print("Bundled reference image into launcher HUD atlas (160x87, ~2.5KB).")
+# Draw the actual panorama portion of the supplied screenshot instead of
+# the earlier placeholder rectangular skyline, using the SAME batched renderer.
+pages=root/"crates/horizon-client/src/android/launcher_pages.rs"
+source=pages.read_text(encoding="utf-8")
+start='''            if wide {
+                // GPU-cheap landscape silhouette. A true panorama texture'''
+end='''            let text_x = margin + 24.0;'''
+if source.count(start)!=1 or source.count(end)!=1:
+    raise RuntimeError("Cannot locate native screenshot hero for texture replacement")
+a=source.index(start)
+b=source.index(end,a)
+replacement='''            if wide {
+                // The scenic banner is stitched into the existing atlas once.
+                // Draw it with one sprite quad; no per-frame image decoding.
+                let right_x = w * 0.59;
+                let right_w = w - margin - right_x;
+                ui.batch.sprite_scaled(
+                    &gui.atlas, "gui/sprites/horizoncraft/banner",
+                    right_x * scale, (hero_y + 1.0) * scale,
+                    right_w * scale, (hero_h - 2.0) * scale,
+                    u32::MAX,
+                );
+            }
+'''
+pages.write_text(source[:a]+replacement+source[b:],encoding="utf-8")
+print("Bundled user reference image and native one-quad launcher backdrop.")
+
