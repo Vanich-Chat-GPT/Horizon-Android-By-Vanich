@@ -19,7 +19,7 @@ patch('''            let hint = ui.fit_text(Face::Regular, 14.0, hint, w - 64.0)
             ui.text(Face::Regular, 14.0, 32.0, 270.0, color::MUTED, &hint);''',
 '''            let hint = ui.fit_text(Face::Regular, 14.0, hint, w - 64.0);
             ui.text(Face::Regular, 14.0, 32.0, 270.0, color::MUTED, &hint);
-            let page_number = self.catalog.offset / 20 + 1;
+            let page_number = self.catalog.offset / 12 + 1;
             let listing = format!("Online catalog  /  Page {}  /  {} results",
                 page_number, self.catalog.results.len());
             ui.text(Face::Regular, 13.0, 32.0, 286.0, color::MUTED,
