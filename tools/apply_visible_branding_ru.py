@@ -46,7 +46,7 @@ rewrite(options,[
 pages="crates/horizon-client/src/android/launcher_pages.rs"
 rewrite(pages,[
     ('&format!("Horizon Android {}", crate::backend::VERSION)',
-     '&format!("HorizonCraft {}", crate::backend::VERSION)'),
+     '"HorizonCraft 1.3.3"'),
 ])
 p=root/pages
 s=p.read_text(encoding="utf-8")
@@ -59,6 +59,12 @@ s=s.replace('"Modrinth shader ZIPs / experimental compatibility; some packs may 
 s=s.replace('"Search Horizon mods or paste an HTTPS .hmod link"',
             '"Поиск модов или импорт HTTPS-ссылки .hmod"')
 p.write_text(s,encoding="utf-8")
+
+# GitHub button opens this app's official repository, not the engine source.
+rewrite("crates/horizon-client/src/android/platform.rs", [
+    ('open_url("https://github.com/Vasysik/horizon-android")',
+     'open_url("https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich")')
+])
 
 # The online catalog's provider names and URLs are preserved intentionally:
 # hiding actual download provenance would be misleading and break trust.
