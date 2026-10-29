@@ -39,6 +39,10 @@ patch("crates/horizon-client/src/streaming.rs",
 # Show truthful, non-destructive quality controls: all pixels of the selected
 # preset are retained; queue pacing only changes when chunk results are handled.
 # The quality profile 100% stays available to users.
+# Display name can change without changing Android applicationId or signing identity.
+patch("packaging/android/AndroidManifest.xml",
+      'android:label="Horizon Android"',
+      'android:label="HorizonCraft"')
 # Increment APK version with persistent package ID and SAME signing key.
 patch("packaging/android/build.gradle","versionCode 27","versionCode 28")
 patch("packaging/android/build.gradle","versionName '1.1.1'","versionName '1.2.0'")
