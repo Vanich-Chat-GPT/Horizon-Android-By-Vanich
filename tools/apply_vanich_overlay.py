@@ -124,7 +124,7 @@ patch(pages, 'use super::*;', 'use super::*;\nuse crate::catalog::tr;')
 patch(pages, '    RecordPerformance,\n', '    RecordPerformance,\n    Language,\n')
 # Style uses rounded Material-inspired filled/pill buttons, with the same hit targets.
 patch(pages, '        2.0,\n        if accent { color::ACCENT } else { color::RAISED },',
-      '        (h * 0.5).min(26.0),\n        if accent { color::ACCENT } else { color::RAISED },')
+      '        2.0,\n        if accent { color::ACCENT } else { color::RAISED },')
 patch(pages, '    let label = ui.fit_text(Face::Medium, font, label, w - 2.0 * padding);',
       '    let label = ui.fit_text(Face::Medium, font, tr(label), w - 2.0 * padding);')
 # Localize fixed page headlines and launcher-visible labels.
@@ -172,18 +172,6 @@ pub fn tr(text: &str) -> &str {''')
 styles = "packaging/android/res/values/styles.xml"
 patch(styles, '#9a86ff', '#D0BCFF')
 theme = "crates/horizon-theme/src/lib.rs"
-patch(theme, 'pub const DARK: Palette = Palette {\n    page: 0x0d0e13,',
-      'pub const DARK: Palette = Palette {\n    page: 0x141218,')
-patch(theme, '    plate_soft: 0x181a22,', '    plate_soft: 0x211f26,')
-patch(theme, '    plate: 0x20222c,', '    plate: 0x29262f,')
-patch(theme, '    surface: 0x16181f,', '    surface: 0x2b2930,')
-patch(theme, '    rule: 0x24262f,', '    rule: 0x49454f,')
-patch(theme, '    ink: 0xecedf3,', '    ink: 0xe6e0e9,')
-patch(theme, '    ink_soft: 0xc5c7d1,', '    ink_soft: 0xcac4d0,')
-patch(theme, '    muted: 0x8b8f9c,', '    muted: 0x938f99,')
-patch(theme, '    accent: 0x9a86ff,', '    accent: 0xd0bcff,')
-patch(theme, '    on_accent: 0x0d0e13,', '    on_accent: 0x381e72,')
-
 # Prefer the device's licensed system Roboto (Cyrillic coverage + Material type).
 # The once-cell owns the bytes for the lifetime of the process, avoiding per-frame
 # allocations and bundling redistributed font binaries.
