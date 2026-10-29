@@ -114,33 +114,6 @@ replace(pages,
                 settings.vignette = fancy;
                 settings.prioritize_chunk_updates = 1;
                 settings.save(&path);''')
-# Expose existing game's control editor in launch Settings for discoverability
-# without fabricating any input path: this label directs user to actual in-game UI.
-replace(catalog,
-        '''        "Graphics preset" => "Профиль графики",''',
-        '''        "Touch customization" => "Настройка кнопок",
-        "Edit in game: Options > Controls > Customize Touch" =>
-            "В игре: Настройки > Управление > Настроить кнопки",
-        "Graphics preset" => "Профиль графики",''')
-# The Settings page has a static 10-row viewport following previous overlay.
-replace(pages,
-        '''                (tr("Graphics preset"), tr(c.quality_preset.label()).into(), Action::GraphicsPreset),''',
-        '''                (
-                    tr("Touch customization"),
-                    tr("Edit in game: Options > Controls > Customize Touch").into(),
-                    Action::ShowTouchHelp,
-                ),
-                (tr("Graphics preset"), tr(c.quality_preset.label()).into(), Action::GraphicsPreset),''')
-replace(pages, "    GraphicsPreset,\n", "    GraphicsPreset,\n    ShowTouchHelp,\n")
-replace(pages, "10.0 * row_height", "11.0 * row_height", expected=2)
-replace(pages,
-        '''            Some(Action::GraphicsPreset) => {''',
-        '''            Some(Action::ShowTouchHelp) => {
-                self.catalog.status =
-                    tr("Edit in game: Options > Controls > Customize Touch").into();
-            }
-            Some(Action::GraphicsPreset) => {''')
-
 # The upstream game thread currently drains and allocates *all* completed
 # streaming jobs every update, then performs each lighting/mesh/world mutation
 # in the same frame. Limit Android intake to bound per-frame work.
