@@ -32,7 +32,7 @@ replace(pages, "settings.weather_radius = if fancy { 8 } else { 4 };",
 # A stricter frame-time budget on Android; the receiver retains queued
 # results instead of discarding them. This may delay chunk appearance.
 replace(streaming, "let received = received.take(48).collect::<Vec<_>>();",
-        "let received = received.take(24).collect::<Vec<_>>();")
+        "let received = received.take(if self.loading { 32 } else { 16 }).collect::<Vec<_>>();")
 
 # Preserve the existing tested Material You launcher controls; visual redesign
 # will be implemented independently after the Low End build passes CI.
@@ -58,6 +58,14 @@ replace(pages, '''        ui.batch
         ui.rounded(w * 0.62, h * 0.64, w * 0.25, h * 0.18, 0.0, color::RAISED);
         ui.text(''')
 
+# Visible stage/byte progress in the native installer. A notification after
+# process termination needs an Android foreground service (not yet present).
+replace(pages, '''                let bar_y = h - 152.0;
+                ui.rounded(32.0, bar_y, w - 64.0, 4.0, 2.0, color::RAISED);''', '''                let bar_y = h - 152.0;
+                ui.text(Face::Medium, 15.0, 32.0, bar_y - 25.0,
+                    color::TEXT, &format!("Installing: {:.0}%", overall * 100.0));
+                ui.rounded(32.0, bar_y, w - 64.0, 4.0, 2.0, color::RAISED);''')
+
 # Make the home headline distinguish the update without changing Minecraft
 # gameplay strings or loading third-party game art.
 replace(pages, '"JAVA EDITION  /  ANDROID ARM64",',
@@ -67,4 +75,4 @@ replace(pages, '"JAVA EDITION  /  ANDROID ARM64",',
 replace("packaging/android/build.gradle", "versionCode 25", "versionCode 26")
 replace("packaging/android/build.gradle", "versionName '1.0.0'", "versionName '1.1.0'")
 
-print("Low End v1.1: Android chunk budget 24, Eco 4/4, balanced 7/5, existing Material You buttons, versionCode 26.")
+print("Low End v1.1: Android chunk budget 16 normal / 32 initial load, Eco 4/4, balanced 7/5, existing Material You buttons, versionCode 26.")
