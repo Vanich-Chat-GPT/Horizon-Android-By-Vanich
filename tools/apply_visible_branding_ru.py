@@ -54,7 +54,7 @@ rewrite(options,[
 pages="crates/horizon-client/src/android/launcher_pages.rs"
 rewrite(pages,[
     ('&format!("Horizon Android {}", crate::backend::VERSION)',
-     '"HorizonCraft 1.3.3"'),
+     '"HorizonCraft v3"'),
 ])
 p=root/pages
 s=p.read_text(encoding="utf-8")
