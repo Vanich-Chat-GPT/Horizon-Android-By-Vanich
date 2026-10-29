@@ -66,7 +66,34 @@ s=s.replace('"Modrinth shader ZIPs / experimental compatibility; some packs may 
             '"Онлайн-шейдеры ZIP / совместимость не гарантируется"')
 s=s.replace('"Search Horizon mods or paste an HTTPS .hmod link"',
             '"Поиск модов или импорт HTTPS-ссылки .hmod"')
+# Russian text for the screenshot's actual home-card steps and catalog.
+s=s.replace('Minecraft 26.3  /  Profile {}', 'Minecraft 26.3  /  Профиль {}')
+s=s.replace('Online catalog  /  Page {}  /  {} results',
+            'Онлайн-каталог  /  Страница {}  /  {} результатов')
+s=s.replace('"Repository opened in browser."', '"Страница проекта открыта."')
+s=s.replace('"No browser available to open the repository."',
+            '"Браузер для открытия проекта не найден."')
 p.write_text(s,encoding="utf-8")
+
+# Home card passes unnumbered strings through tr(), whereas older localization
+# keys contained the prefix "01  ". Keep both forms so no English leaks into
+# the new functional home layout.
+catalog=root/"crates/horizon-client/src/android/catalog.rs"
+s=catalog.read_text(encoding="utf-8")
+anchor='        "On" => "Вкл.",'
+if s.count(anchor)!=1: raise RuntimeError("Missing Russian catalog lookup anchor")
+extra=[
+    ("Open a world or join a Java server", "Откройте мир или подключитесь к серверу Java"),
+    ("Touch setup: Options > Controls", "Управление: Настройки → Управление"),
+    ("Find packs and .hmod in the tabs", "Моды и ресурсы доступны во вкладках"),
+    ("Download resources from Mojang", "Скачивание игровых ресурсов"),
+    ("Install and verify on this phone", "Установка и проверка на устройстве"),
+    ("Play offline or sign in for servers", "Играйте офлайн или войдите для серверов"),
+]
+new=''.join(f'        "{en}" => "{ru}",\\n' for en,ru in extra)
+# replace escaped newline sequences with source-code newlines
+new=new.replace('\\n','\n')
+catalog.write_text(s.replace(anchor,new+anchor,1),encoding="utf-8")
 
 # Android native window caption and clipboard item label.
 rewrite("crates/horizon-client/src/android/launcher.rs", [
