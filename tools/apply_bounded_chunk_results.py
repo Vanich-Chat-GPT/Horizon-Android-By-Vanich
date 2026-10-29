@@ -15,8 +15,9 @@ def replace(a,b):
  if s.count(a)!=1: raise RuntimeError(f"memory queue patch missing/ambiguous anchor: {a[:100]}")
  s=s.replace(a,b,1)
 # Preserve the engine's original scheduling and queue semantics.
-# Only reduce temporary allocation growth when collecting in-flight candidates.
+# Saturating subtraction avoids usize underflow if the in-flight set is larger
+# than the target capacity; it does not impose a queue or result limit.
 replace("            let mut wanted = Vec::new();",
-        "            let mut wanted = Vec::with_capacity(capacity - input.generating.len());")
+        "            let mut wanted = Vec::with_capacity(capacity.saturating_sub(input.generating.len()));")
 p.write_text(s,encoding="utf-8")
 print("Preserved original streaming, chunk, and lighting scheduling; reduced temporary candidate-vector reallocations without changing visual settings.")
