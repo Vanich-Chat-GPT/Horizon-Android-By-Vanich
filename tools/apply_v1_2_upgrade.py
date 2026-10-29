@@ -46,7 +46,4 @@ patch("packaging/android/AndroidManifest.xml",
 # Increment APK version with persistent package ID and SAME signing key.
 patch("packaging/android/build.gradle","versionCode 27","versionCode 33")
 patch("packaging/android/build.gradle","versionName '1.1.1'","versionName '1.3.3'")
-patch("crates/horizon-client/src/android/launcher_pages.rs",
-      '"JAVA EDITION  /  LOW END v1.1",',
-      '"JAVA EDITION  /  CLASSIC ANDROID",')
 print("v1.3.3: Russian game, bounded chunk work, versionCode 33")
