@@ -31,21 +31,27 @@ patch(activity, '    private native void nativeDocumentResult(int request, int r
 
     /** Invoked from native launcher before starting an install worker. */
     public void startInstallService(String progressPath) {
-        if (android.os.Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[] {
-                android.Manifest.permission.POST_NOTIFICATIONS
-            }, 4242);
-        }
-        android.content.Intent intent = new android.content.Intent(this, HorizonInstallService.class);
-        intent.putExtra("progress_path", progressPath);
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
-            else startService(intent);
-        } catch (RuntimeException failure) {
-            android.util.Log.w("HorizonInstall", "Unable to start foreground notification", failure);
-        }
+        // Permission and service start run on the Android UI thread, not the
+        // native Vulkan/render event thread.
+        runOnUiThread(() -> {
+            if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                    != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] {
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                }, 4242);
+            }
+            android.content.Intent intent = new android.content.Intent(
+                this, HorizonInstallService.class);
+            intent.putExtra("progress_path", progressPath);
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
+                else startService(intent);
+            } catch (RuntimeException failure) {
+                android.util.Log.w("HorizonInstall",
+                    "Unable to start foreground notification", failure);
+            }
+        });
     }''')
 service = root / "packaging/android/java/dev/horizon/android/HorizonInstallService.java"
 service.parent.mkdir(parents=True, exist_ok=True)
