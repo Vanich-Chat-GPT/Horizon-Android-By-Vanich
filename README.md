@@ -1,17 +1,17 @@
 # ⛏️ Horizon Android by Vanich
 ### Minecraft Java Edition · Android ARM64 · Native Rust/Vulkan
 
-**🌿 v1.1.0 LOW END UPDATE — исходники в разработке**
+**🌿 v1.1.1 LOW END UPDATE — исходники для локальной сборки (НЕ готовый APK)**
 
 > 🧱 **Minecraft × Material You** — блоковые кнопки, динамические цвета Android, русский интерфейс и сенсорное управление.
 >
-> ⚡ **Low End** — экономный режим 4 чанка прорисовки / 4 симуляции, рендер 50%, облегчённые эффекты; ограничение обработки результатов чанков до 24 за кадр на Android.
+> ⚡ **Low End** — экономный режим 4 чанка прорисовки / 4 симуляции, рендер 50%, облегчённые эффекты; обработка до 16 результатов чанков за проход при игре и до 32 при начальной загрузке; эти значения ещё не проверены замерами.
 >
 > 📲 **Фоновые загрузки и уведомления** — запланированы; пока НЕ реализованы и не должны считаться работающими после закрытия приложения.
 >
-> 🧪 **Статус:** исходники v1.1.0 отправлены на проверку GitHub Actions; APK v1.1.0 ещё не опубликован. Производительность на устройствах не измерена.
+> 🧪 **Статус:** исходники v1.1.1 в разработке; автозапуск GitHub Actions отключён по просьбе пользователя. APK v1.1.1 не собран и не опубликован; производительность на устройствах не измерена.
 
-[**Сборки и тесты (Actions)**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/actions/workflows/android-test.yml) · [**Последний проверенный релиз v1.0.0**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.0.0-minecraft-java-android-native) · [**Настройка подписи**](docs/ANDROID_UPDATES.md)
+[**Последний проверенный релиз v1.0.0**](https://github.com/Vanich-Chat-GPT/Horizon-Android-By-Vanich/releases/tag/v1.0.0-minecraft-java-android-native) · [**Настройка подписи**](docs/ANDROID_UPDATES.md)
 
 ---
 
