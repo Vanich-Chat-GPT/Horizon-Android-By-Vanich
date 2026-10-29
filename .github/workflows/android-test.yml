@@ -1,11 +1,6 @@
 name: Build signed ARM64 APK and publish verified release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'tools/**'
-      - '.github/workflows/android-test.yml'
   workflow_dispatch:
 
 permissions:
