@@ -68,6 +68,14 @@ s=s.replace('"Search Horizon mods or paste an HTTPS .hmod link"',
             '"Поиск модов или импорт HTTPS-ссылки .hmod"')
 p.write_text(s,encoding="utf-8")
 
+# Android native window caption and clipboard item label.
+rewrite("crates/horizon-client/src/android/launcher.rs", [
+    ('with_title("Horizon Android")', 'with_title("HorizonCraft")')
+])
+rewrite("crates/horizon-client/src/android/platform.rs", [
+    ('env.new_string("Horizon")?', 'env.new_string("HorizonCraft")?')
+])
+
 # GitHub button opens this app's official repository, not the engine source.
 rewrite("crates/horizon-client/src/android/platform.rs", [
     ('open_url("https://github.com/Vasysik/horizon-android")',
