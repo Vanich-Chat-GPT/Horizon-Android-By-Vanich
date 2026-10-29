@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Reduce chunk-streaming memory spikes and configure Android-friendly far terrain.
+"""Reduce chunk scheduling allocations and configure Android-friendly far terrain.
 
-The renderer still builds exact full-detail near chunks. Only the independent
-far-terrain LOD may use coarser tiles; actual chunks, lighting and game logic
-are preserved. Queues are bounded by in-flight stage budgets, not by dropping
-world data or clipping generated results.
+Near chunks retain full detail. The supported far-terrain LOD uses coarser tiles,
+and Android defaults use fewer resident chunks. No generated chunks, queued jobs,
+lighting data, or completed results are arbitrarily discarded or capped.
 """
 from pathlib import Path
 import re
@@ -98,111 +97,24 @@ impl GenerationScan {
         "            wanted.sort_unstable();",
     )
 
-    # Keep result messages in the existing channel but apply a small batch per
-    # update. In-flight stages below are bounded, so payload accumulation stays
-    # proportional to worker count without making worker shutdown deadlock.
-    source = replace(
-        source,
-        "        let mut uploads = Vec::new();\n        if self.paused {",
-        "        let mut uploads = Vec::new();\n"
-        "        const RESULTS_PER_UPDATE: usize = 4;\n"
-        "        if self.paused {",
-    )
+    # Drain results directly from the queue without collecting them into a
+    # second temporary Vec. Preserve all ready results and their ordering.
     source = replace(
         source,
         """        let deferred = std::mem::take(&mut self.deferred);
         let received = std::iter::from_fn(|| self.results.try_recv().ok());
         for done in deferred.into_iter().chain(received.collect::<Vec<_>>()) {""",
-        """        let mut completed = Vec::with_capacity(RESULTS_PER_UPDATE);
-        let deferred_count = self.deferred.len().min(RESULTS_PER_UPDATE);
-        completed.extend(self.deferred.drain(..deferred_count));
-        while completed.len() < RESULTS_PER_UPDATE {
-            match self.results.try_recv() {
-                Ok(done) => completed.push(done),
-                Err(_) => break,
-            }
-        }
-        for done in completed {""",
-    )
-
-    # Bound full proto->chunk conversions, sorted so the nearest chunks progress
-    # first instead of depending on hash-map iteration order.
-    source = replace(
-        source,
-        """        // Finalize chunks whose neighbourhood is decorated.
-        let candidates: Vec<(i32, i32)> = self.protos.keys().copied().collect();
-        for (x, z) in candidates {""",
-        """        // Finalize chunks whose neighbourhood is decorated. Bound outstanding
-        // conversions so completed full chunks cannot pile up in the job heap.
-        let workers = self.threads.len().max(1);
-        let stage_limit = workers.saturating_mul(2).max(1);
-        let mut candidates: Vec<(i32, i32)> = self.protos.keys().copied().collect();
-        candidates.sort_unstable_by_key(|&(x, z)| self.distance(x, z));
-        for (x, z) in candidates {
-            if self.finishing.len() >= stage_limit {
-                break;
-            }""",
-    )
-    source = replace(
-        source,
-        "        let workers = self.threads.len();\n        if self.decorates && self.order_area",
-        "        if self.decorates && self.order_area",
-    )
-
-    # Lighting snapshots retain a 3x3 chunk region. Schedule nearby lights
-    # first and leave all unscheduled coordinates dirty for the next update.
-    source = replace(
-        source,
-        """        let light: Vec<_> = world.dirty_light.iter().copied().collect();
-        for (x, z) in light {""",
-        """        let mut light: Vec<_> = world.dirty_light.iter().copied().collect();
-        light.sort_unstable_by_key(|&(x, z)| self.distance(x, z));
-        for (x, z) in light {""",
-    )
-    source = replace(
-        source,
-        """            if !world.chunks.contains_key(&(x, z)) {
-                world.dirty_light.remove(&(x, z));
-                continue;
-            }
-            let Some(region) = self.light_region(world, x, z) else {""",
-        """            if !world.chunks.contains_key(&(x, z)) {
-                world.dirty_light.remove(&(x, z));
-                continue;
-            }
-            if self.lighting.len() >= stage_limit {
-                break;
-            }
-            let Some(region) = self.light_region(world, x, z) else {""",
-    )
-
-    # Mesh snapshots and output payloads can be large. If the budget is reached,
-    # preserve the remaining sections in dirty_sections instead of discarding them.
-    source = replace(
-        source,
-        """        let columns: Vec<_> = world.dirty_sections.columns().collect();
-        for ((x, z), sections) in columns {
-            if !world.chunks.contains_key(&(x, z)) {""",
-        """        let columns: Vec<_> = world.dirty_sections.columns().collect();
-        let mesh_limit = stage_limit;
-        for ((x, z), sections) in columns {
-            if self.meshing.len() >= mesh_limit {
-                break;
-            }
-            if !world.chunks.contains_key(&(x, z)) {""",
-    )
-    source = replace(
-        source,
-        """            world.dirty_sections.take_column(x, z);
-            for sy in section_indexes(sections) {
-                let first = self.meshed.insert((x, z));""",
-        """            world.dirty_sections.take_column(x, z);
-            for sy in section_indexes(sections) {
-                if self.meshing.len() >= mesh_limit {
-                    world.dirty_sections.insert((x, sy, z));
-                    continue;
+        """        let deferred = std::mem::take(&mut self.deferred);
+        let mut deferred = deferred.into_iter();
+        loop {
+            let done = if let Some(done) = deferred.next() {
+                done
+            } else {
+                match self.results.try_recv() {
+                    Ok(done) => done,
+                    Err(_) => break,
                 }
-                let first = self.meshed.insert((x, z));""",
+            };""",
     )
     return source
 
