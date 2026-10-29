@@ -232,7 +232,8 @@ def patch_graphics(source: str) -> str:
                     // Leave a CPU core for the renderer/server where possible.
                     // Three workers are enough to overlap chunk work without
                     // overcommitting memory bandwidth on a low-RAM mobile SoC.
-                    g.workers = std::thread::available_parallelism()\n                        .map_or(2, |n| n.get().saturating_sub(2).clamp(1, 3)) as u32;
+                    g.workers = std::thread::available_parallelism()
+                        .map_or(2, |n| n.get().saturating_sub(2).clamp(1, 3)) as u32;
                 }
                 if fs::create_dir_all(dir).is_ok()
                     && fs::write(dir.join(FILE), g.serialize()).is_ok()
