@@ -109,7 +109,7 @@ jobs:
           APK="upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -n 8
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "versionCode='30'.*versionName='1.3.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "versionCode='30'.*versionName='1.3.1'"
           mkdir -p dist
           cp "$APK" dist/HorizonCraft-v1.3.1-android-arm64-signed.apk
           (cd dist && sha256sum HorizonCraft-v1.3.1-android-arm64-signed.apk > SHA256SUMS.txt)
