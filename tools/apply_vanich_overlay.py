@@ -287,27 +287,16 @@ patch(pages, '            Some(Action::Language) => {',
                 use crate::catalog::QualityPreset;
                 let next = self.catalog.config.quality_preset.next();
                 self.catalog.config.quality_preset = next;
-                let (scale, chunks, simulation, max_fps, fancy) = match next {
-                    QualityPreset::Eco => (50, 6, 5, 60, false),
-                    QualityPreset::Balanced => (75, 9, 7, 60, false),
-                    QualityPreset::Quality => (100, 14, 10, 90, true),
-                };
-                let resolution = crate::display::RenderScale::new(scale);
+                let max_fps = 90;
+                let resolution = crate::display::RenderScale::new(100);
                 self.catalog.config.render_scale = resolution;
                 crate::display::set_scale(resolution);
+                // Prioritize frame delivery without silently reducing visual quality,
+                // render distance, simulation distance, particles, or lighting.
                 let path = self.catalog.config.game_home(&self.home).join("options.txt");
                 let mut settings = horizon_client::settings::Settings::load(&path);
-                settings.render_distance = chunks;
-                settings.simulation_distance = simulation;
                 settings.max_fps = max_fps;
-                settings.vsync = !fancy;
-                settings.graphics_preset = if fancy { "fancy" } else { "fast" }.into();
-                settings.clouds = if fancy { "true" } else { "false" }.into();
-                settings.particles = if fancy { 0 } else { 2 };
-                settings.entity_shadows = fancy;
-                settings.smooth_lighting = fancy;
-                settings.mipmap_levels = if fancy { 4 } else { 0 };
-                settings.biome_blend = if fancy { 2 } else { 0 };
+                settings.vsync = false;
                 settings.save(&path);
                 self.catalog.config.save(&self.home)?;
                 self.catalog.status = tr("Graphics profile saved. Applies when Play starts.").into();
