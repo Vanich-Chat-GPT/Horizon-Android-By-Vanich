@@ -94,6 +94,8 @@ pub fn tr(text: &str) -> &str {
         "Vulkan / compatibility" => "Vulkan / совместимость",
         "OpenGL ES / experimental" => "OpenGL ES / экспериментально",
         "Automatic" => "Автоматически",
+        "Touch Controls" => "Сенсорное управление",
+        "Touch controls" => "Сенсорное управление",
         "Touch & Android keyboard" => "Касания и клавиатура Android",
         "Keyboard & mouse" => "Клавиатура и мышь",
         "Landscape (sensor)" => "Альбомная (датчик)",
