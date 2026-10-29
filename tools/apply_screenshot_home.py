@@ -18,7 +18,7 @@ def replace(old,new):
 
 # Screenshot-like pill navigation; native targets remain unchanged.
 replace('''        2.0,
-        if accent { color::ACCENT } else { color::RAISED },
+        if accent { color::launcher_accent() } else { color::RAISED },
     );
     let padding =''',
 '''        (h * 0.5).min(24.0),
