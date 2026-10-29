@@ -1,6 +1,11 @@
 name: Build signed ARM64 APK and publish verified release
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/**'
+      - '.github/workflows/android-test.yml'
   workflow_dispatch:
 
 permissions:
@@ -62,9 +67,10 @@ jobs:
           python3 overlay/tools/apply_joystick_modes.py upstream
           python3 overlay/tools/apply_friend_code_ru.py upstream
           python3 overlay/tools/apply_v1_3_3_catalog.py upstream
+          python3 overlay/tools/apply_visible_branding_ru.py upstream
       - name: Validate patched sources
         run: |
-          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py overlay/tools/apply_release_polish.py overlay/tools/apply_low_end_update.py overlay/tools/apply_background_install.py overlay/tools/apply_v1_2_upgrade.py overlay/tools/apply_screenshot_home.py overlay/tools/apply_bounded_chunk_results.py overlay/tools/apply_joystick_modes.py overlay/tools/apply_friend_code_ru.py overlay/tools/apply_v1_3_3_catalog.py
+          python3 -m py_compile overlay/tools/apply_vanich_overlay.py overlay/tools/apply_touch_performance.py overlay/tools/apply_release_polish.py overlay/tools/apply_low_end_update.py overlay/tools/apply_background_install.py overlay/tools/apply_v1_2_upgrade.py overlay/tools/apply_screenshot_home.py overlay/tools/apply_bounded_chunk_results.py overlay/tools/apply_joystick_modes.py overlay/tools/apply_friend_code_ru.py overlay/tools/apply_v1_3_3_catalog.py overlay/tools/apply_visible_branding_ru.py
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           ET.parse('upstream/packaging/android/res/values/styles.xml')
@@ -153,3 +159,23 @@ jobs:
           path: upstream/.local/android/apk/arm64-v8a/horizon-android-public.apk
           if-no-files-found: error
           retention-days: 7
+
+      - name: Publish verified signed APK as a stable GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v1.3.3-ru-r${{ github.run_number }}
+          name: HorizonCraft v1.3.3 — Русский интерфейс · ARM64
+          prerelease: false
+          draft: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            HorizonCraft Android ARM64. Русификация игровых настроек
+            сенсорного управления, фирменное оформление HorizonCraft,
+            адаптивный главный экран и оптимизация обработки чанков.
+            Подпись и совместимость обновления с v1.1.1 проходят
+            автоматическую проверку. FPS/RAM на реальном устройстве
+            ещё не измерены.
+          files: |
+            dist/HorizonCraft-v1.3.3-android-arm64-signed.apk
+            dist/SHA256SUMS.txt
+          fail_on_unmatched_files: true
