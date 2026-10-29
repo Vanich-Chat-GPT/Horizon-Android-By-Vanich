@@ -76,5 +76,9 @@ replace('''            let Some(region) = Self::region(world, x, z) else {
             let Some(region) = Self::region(world, x, z) else {
                 continue;
             };''')
+# Reserve only the bounded number of candidate jobs before sorting and truncating.
+# This avoids geometric Vec growth during wide render-distance scans.
+replace("            let mut wanted = Vec::new();",
+        "            // Reserve the bounded in-flight batch before scanning candidates.\n            let mut wanted = Vec::with_capacity(capacity - input.generating.len());")
 p.write_text(s,encoding="utf-8")
 print("Android bounds completed-result buffering and queued lighting/mesh snapshots; at most 12 fresh results are applied per update. Deferred dirty work is retained, not dropped, preserving rendered content.")
