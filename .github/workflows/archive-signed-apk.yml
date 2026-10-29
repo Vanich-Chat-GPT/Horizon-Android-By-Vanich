@@ -48,12 +48,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp dist/horizon-android-public.apk dist/HorizonCraft-v1.3.0-android-arm64-signed.apk
-          (cd dist && sha256sum HorizonCraft-v1.3.0-android-arm64-signed.apk > SHA256SUMS.txt)
-          gh release create "v1.3.0-r${SOURCE_RUN}" \
-             dist/HorizonCraft-v1.3.0-android-arm64-signed.apk dist/SHA256SUMS.txt \
+          cp dist/horizon-android-public.apk dist/HorizonCraft-v1.3.1-android-arm64-signed.apk
+          (cd dist && sha256sum HorizonCraft-v1.3.1-android-arm64-signed.apk > SHA256SUMS.txt)
+          gh release create "v1.3.1-r${SOURCE_RUN}" \
+             dist/HorizonCraft-v1.3.1-android-arm64-signed.apk dist/SHA256SUMS.txt \
              --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
-             --title "HorizonCraft v1.3.0 — signed Android ARM64" \
+             --title "HorizonCraft v1.3.1 — signed Android ARM64" \
              --notes "Native ARM64; foreground installation notifications; Russian game locale; bounded chunk generation; signature compatible with v1.1.1. Device FPS/RAM gains not yet benchmarked."
       - name: Publish downloadable APK to dedicated public GitHub branch
         if: env.APK_MISSING != '1'
@@ -63,11 +63,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p publish
-          cp dist/horizon-android-public.apk publish/HorizonCraft-v1.3.0-android-arm64-signed.apk
-          (cd publish && sha256sum HorizonCraft-v1.3.0-android-arm64-signed.apk > SHA256SUMS.txt)
+          cp dist/horizon-android-public.apk publish/HorizonCraft-v1.3.1-android-arm64-signed.apk
+          (cd publish && sha256sum HorizonCraft-v1.3.1-android-arm64-signed.apk > SHA256SUMS.txt)
           cat > publish/README.md <<'DOC'
           # HorizonCraft — Android ARM64 signed APK
-          Download HorizonCraft-v1.3.0-android-arm64-signed.apk. Built from the
+          Download HorizonCraft-v1.3.1-android-arm64-signed.apk. Built from the
           native Rust/Android sources with the persistent certificate and
           checked against the previous release for upgrade compatibility.
           See the main branch for source code and feature limitations.
@@ -77,6 +77,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .
-          git commit -m "Signed HorizonCraft v1.3.0 APK from CI"
+          git commit -m "Signed HorizonCraft v1.3.1 APK from CI"
           git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin HEAD:refs/heads/apk-download
