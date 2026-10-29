@@ -225,6 +225,8 @@ def patch_graphics(source: str) -> str:
             let marker = dir.join(".horizon-android-performance-v1");
             if !marker.exists() {
                 g.far_detail = FarDetail::Reduced;
+                // Skip entities hidden by opaque terrain; this changes draw work, not visibility.
+                g.entity_culling = true;
                 if g.lod_distance == 0 {
                     g.lod_distance = 32;
                 }
@@ -302,6 +304,8 @@ def patch_settings(source: str) -> str:
             if !marker.exists() {
                 settings.render_distance = settings.render_distance.min(8);
                 settings.simulation_distance = settings.simulation_distance.min(6);
+                // Match the tablet's 90 Hz display ceiling without disabling VSync.
+                settings.max_fps = settings.max_fps.min(90);
                 settings.save(path);
                 if fs::read(path).is_ok() {
                     let _ = fs::write(marker, b"1\\n");
