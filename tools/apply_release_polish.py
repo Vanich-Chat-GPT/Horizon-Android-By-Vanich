@@ -115,23 +115,6 @@ patch(pages,
     '''        crate::documents::draw_ui(&mut ui);''',
     '''        crate::documents::draw_ui(&mut ui);''')
 
-# Native Minecraft HUD glyphs as a visual signature in the launcher hero,
-# while Material You Roboto remains for legible long Cyrillic paragraphs.
-patch(pages,
-    '''            if installing {
-                let current = InstallStage::ALL''',
-    '''            // Minecraft's own HUD atlas provides the pixel-game subtitle.
-            ui.batch.text(
-                &gui.atlas,
-                "JAVA EDITION  /  ANDROID ARM64",
-                32.0 * scale,
-                (top + 80.0) * scale,
-                horizon_client::hud::rgba(208, 188, 255, 255),
-                true,
-            );
-            if installing {
-                let current = InstallStage::ALL''')
-
 # Fill remaining untranslated static native launcher guidance and status text.
 extra_ru = {
     "Please keep Horizon open. Downloaded files are kept for retry.": "Не закрывайте Horizon. Загрузки сохраняются для повтора.",
