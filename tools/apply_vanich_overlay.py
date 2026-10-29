@@ -284,19 +284,48 @@ patch(pages, '9.0 * row_height', '10.0 * row_height')
 patch(pages, '9.0 * row_height', '10.0 * row_height')
 patch(pages, '            Some(Action::Language) => {',
       '''            Some(Action::GraphicsPreset) => {
-                use crate::catalog::QualityPreset;
                 let next = self.catalog.config.quality_preset.next();
                 self.catalog.config.quality_preset = next;
-                let max_fps = 90;
+
+                // Keep native resolution and close-range graphics intact. The
+                // profile trades simulation work and distant LOD detail instead.
+                let (render_distance, simulation_distance, lod_distance, far_detail, workers) =
+                    match next {
+                        crate::catalog::QualityPreset::Eco => (
+                            6,
+                            5,
+                            24,
+                            horizon_client::graphics::FarDetail::Reduced,
+                            2,
+                        ),
+                        crate::catalog::QualityPreset::Balanced => (
+                            8,
+                            6,
+                            32,
+                            horizon_client::graphics::FarDetail::Reduced,
+                            3,
+                        ),
+                        crate::catalog::QualityPreset::Quality => (
+                            12,
+                            8,
+                            32,
+                            horizon_client::graphics::FarDetail::Full,
+                            3,
+                        ),
+                    };
                 let resolution = crate::display::RenderScale::new(100);
                 self.catalog.config.render_scale = resolution;
                 crate::display::set_scale(resolution);
-                // Prioritize frame delivery without silently reducing visual quality,
-                // render distance, simulation distance, particles, or lighting.
+
                 let path = self.catalog.config.game_home(&self.home).join("options.txt");
                 let mut settings = horizon_client::settings::Settings::load(&path);
-                settings.max_fps = max_fps;
-                settings.vsync = false;
+                settings.render_distance = render_distance;
+                settings.simulation_distance = simulation_distance;
+                settings.max_fps = settings.max_fps.min(90);
+                settings.horizon.lod_distance = lod_distance;
+                settings.horizon.far_detail = far_detail;
+                settings.horizon.entity_culling = true;
+                settings.horizon.workers = workers;
                 settings.save(&path);
                 self.catalog.config.save(&self.home)?;
                 self.catalog.status = tr("Graphics profile saved. Applies when Play starts.").into();
