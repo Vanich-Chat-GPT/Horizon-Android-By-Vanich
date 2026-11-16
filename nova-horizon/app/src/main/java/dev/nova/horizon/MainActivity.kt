@@ -1,10 +1,11 @@
 package dev.nova.horizon
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,14 +31,17 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,8 +59,14 @@ private enum class NovaScreen(val title: String, val glyph: String) {
 
 @Composable
 private fun NovaApp() {
+    val context = LocalContext.current
+    val preferences = remember(context) {
+        context.getSharedPreferences("nova_horizon_settings", Context.MODE_PRIVATE)
+    }
     var selected by rememberSaveable { mutableStateOf(NovaScreen.HOME) }
-    var darkTheme by rememberSaveable { mutableStateOf(true) }
+    var darkTheme by remember {
+        mutableStateOf(preferences.getBoolean("dark_theme", true))
+    }
 
     val scheme = if (darkTheme) {
         darkColorScheme(
@@ -96,7 +106,10 @@ private fun NovaApp() {
                     NovaScreen.VERSIONS -> VersionsScreen()
                     NovaScreen.SETTINGS -> SettingsScreen(
                         darkTheme = darkTheme,
-                        onThemeChanged = { darkTheme = it }
+                        onThemeChanged = {
+                            darkTheme = it
+                            preferences.edit().putBoolean("dark_theme", it).apply()
+                        }
                     )
                     NovaScreen.DIAGNOSTICS -> DiagnosticsScreen()
                 }
@@ -144,6 +157,7 @@ private fun HomeScreen(onDiagnostics: () -> Unit) {
                     Text("СОСТОЯНИЕ ПРОЕКТА", fontWeight = FontWeight.Bold)
                     StatusLine("Android оболочка", "Подготовлена")
                     StatusLine("Rust Core / JNI", "Подготовлен")
+                    StatusLine("Проба OpenGL ES", "Подключается в диагностике")
                     StatusLine("Загрузка Minecraft", "Не реализована")
                     StatusLine("Авторизация Microsoft", "Не реализована")
                     StatusLine("Офлайн-запуск игры", "Не реализован")
@@ -224,25 +238,42 @@ private fun SettingsScreen(darkTheme: Boolean, onThemeChanged: (Boolean) -> Unit
 
 @Composable
 private fun DiagnosticsScreen() {
-    val coreStatus = NativeBridge.status()
+    val context = LocalContext.current
+    val coreStatus = remember { NativeBridge.status() }
+    val hasVulkanFeature = remember {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+            context.packageManager.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL)
+    }
+    var glInfo by remember { mutableStateOf<GlProbeResult?>(null) }
+
     Column(
         Modifier.fillMaxSize().padding(22.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Диагностика", fontSize = 26.sp, fontWeight = FontWeight.Bold)
+        AndroidView(
+            factory = { viewContext ->
+                GlProbeView(viewContext) { result -> glInfo = result }
+            },
+            modifier = Modifier.fillMaxWidth().height(2.dp)
+        )
         Card(shape = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatusLine("Android API", Build.VERSION.SDK_INT.toString())
                 StatusLine("Основная ABI", Build.SUPPORTED_ABIS.firstOrNull() ?: "Неизвестно")
                 StatusLine("Доступные ABI", Build.SUPPORTED_ABIS.joinToString())
-                StatusLine("GPU", "Проверка ещё не подключена")
-                StatusLine("Vulkan", "Проверка ещё не подключена")
+                StatusLine("GPU renderer", glInfo?.renderer ?: "Ожидание OpenGL ES…")
+                StatusLine("GL vendor", glInfo?.vendor ?: "Ожидание…")
+                StatusLine("OpenGL ES", glInfo?.version ?: "Ожидание…")
+                StatusLine("GLSL", glInfo?.shadingLanguage ?: "Ожидание…")
+                StatusLine("GL extensions", glInfo?.extensionCount?.toString() ?: "Ожидание…")
+                StatusLine("Vulkan feature", if (hasVulkanFeature) "Объявлена Android" else "Не объявлена")
             }
         }
         Text("Rust Core", fontWeight = FontWeight.Bold)
         Text(coreStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
-            "Данные GPU и реальные игровые метрики не подменяются предположениями по модели устройства.",
+            "Флаг Vulkan от Android не заменяет проверку создания Vulkan instance/device. GPU определяется из активного GL-контекста, а не по названию планшета.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp
         )
