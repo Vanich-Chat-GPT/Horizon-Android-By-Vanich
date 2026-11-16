@@ -2,7 +2,7 @@
 
 Самостоятельный Android-проект для исследования и разработки легального запуска Minecraft Java Edition на ARM64.
 
-> Текущий статус: **independent bootstrap / ранняя разработка**. Это не готовый Minecraft-клиент. На этом этапе есть Android-оболочка, Rust JNI-модуль, измерение frame-time и независимая очередь фоновых задач. JVM, графический мост, официальный загрузчик, Microsoft OAuth и запуск Minecraft ещё не реализованы.
+> Текущий статус: ранняя независимая разработка. Приложение имеет Kotlin/Compose оболочку, Rust JNI-модуль, очередь фоновых задач, метрики frame-time, строгий парсер официального version manifest и рабочий экран проверки каталога Mojang. Это ещё не полноценный Minecraft-клиент.
 
 ## Принципы
 
@@ -12,34 +12,43 @@
 - Не подделываем токены и не обходим лицензионные проверки.
 - Не называем тестовые сцены Minecraft и не показываем фиктивные статусы установки.
 - Не обещаем FPS или совместимость без измерений на реальном устройстве.
-- Основной ABI на старте: `arm64-v8a`.
+- Основной ABI на старте: arm64-v8a.
 
 ## Структура
 
-- `app/` — Kotlin + Jetpack Compose Android application.
-- `core/` — независимое Rust-ядро, JNI bridge и валидатор официального version manifest.
-- `docs/` — архитектура, безопасность, этапы и тестовая матрица.
-- `THIRD_PARTY_NOTICES.md` — реестр используемых инструментов и зависимостей.
+- app/ — Kotlin + Jetpack Compose Android application.
+- core/ — независимое Rust-ядро, JNI bridge, валидатор официального version manifest и приоритетный планировщик задач.
+- docs/ — архитектура, безопасность, этапы и тестовая матрица.
+- THIRD_PARTY_NOTICES.md — реестр используемых инструментов и зависимостей.
 
 ## Сборка
 
-Требуются JDK 17, Android SDK/NDK, Gradle 8.13 и Rust stable.
+Требуются JDK 17, Android SDK API 36, Android NDK r30, Gradle 8.13 и Rust stable.
 
-Из каталога `nova-horizon`:
+Из корня репозитория CI выполняет:
 
-```bash
-cargo test --manifest-path core/Cargo.toml
-cargo fmt --manifest-path core/Cargo.toml -- --check
-cargo clippy --manifest-path core/Cargo.toml --all-targets -- -D warnings
-cargo ndk -t arm64-v8a -o app/src/main/jniLibs build --manifest-path core/Cargo.toml --release
-gradle assembleDebug
-```
+- cargo fmt --manifest-path nova-horizon/core/Cargo.toml -- --check
+- cargo test --manifest-path nova-horizon/core/Cargo.toml
+- cargo clippy --manifest-path nova-horizon/core/Cargo.toml --all-targets -- -D warnings
+- cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release из nova-horizon/core
+- gradle assembleDebug из nova-horizon/
 
-CI выполняет те же проверки и собирает debug APK. Debug APK не является стабильным подписанным релизом.
+Debug APK не является стабильным подписанным релизом.
+
+## Текущая функциональность
+
+- Реальное чтение публичного version_manifest_v2.json по HTTPS с ограничением размера и строгой проверкой хоста/перенаправлений.
+- Проверка структуры, ID, дубликатов, SHA-1 и официальных URL внутри Rust Core.
+- Реальное определение OpenGL ES renderer/vendor/version/extensions из созданного EGL-контекста.
+- Диагностика ABI, CPU core count, доступной/общей RAM и thermal status через Android API.
+- Сохранение локальной настройки тёмной темы.
+- Rust queue дедуплицирует задания по координатам и отбрасывает устаревшие поколения.
+
+Каталог версий пока только показывает метаданные. Он не загружает игровые JAR, библиотеки, assets или natives и не означает, что Minecraft готов к запуску.
 
 ## Важное архитектурное ограничение
 
-Minecraft Java Edition — большая Java-программа, использующая JVM, LWJGL и графические/системные API. Самостоятельный лаунчер и Rust-подсистемы не заменяют JVM и совместимый runtime. Поддержка реальной игры требует отдельной реализации и проверки Java runtime, нативных библиотек, оконно-графического слоя, ввода и сетевого окружения. До завершения этих работ кнопка запуска не активируется.
+Minecraft Java Edition — большая Java-программа, использующая JVM, LWJGL и графические/системные API. Самостоятельный лаунчер и Rust-подсистемы не заменяют Java Virtual Machine и совместимый runtime. Поддержка реальной игры требует отдельной проверки ARM64 JVM, игровых native-библиотек, оконно-графического слоя, ввода, аудио и сетевого окружения. До завершения этих работ кнопка запуска не активируется.
 
 ## Лицензия
 

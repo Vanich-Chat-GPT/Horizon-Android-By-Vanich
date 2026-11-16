@@ -1,9 +1,13 @@
 package dev.nova.horizon
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -29,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -157,10 +164,11 @@ private fun HomeScreen(onDiagnostics: () -> Unit) {
                     Text("СОСТОЯНИЕ ПРОЕКТА", fontWeight = FontWeight.Bold)
                     StatusLine("Android оболочка", "Подготовлена")
                     StatusLine("Rust Core / JNI", "Подготовлен")
-                    StatusLine("Проба OpenGL ES", "Подключается в диагностике")
-                    StatusLine("Загрузка Minecraft", "Не реализована")
-                    StatusLine("Авторизация Microsoft", "Не реализована")
-                    StatusLine("Офлайн-запуск игры", "Не реализован")
+                    StatusLine("Проба OpenGL ES", "Подключена")
+                    StatusLine("Каталог версий", "Проверяется официально")
+                    StatusLine("Загрузка игровых файлов", "Ещё не реализована")
+                    StatusLine("Авторизация Microsoft", "Ещё не реализована")
+                    StatusLine("Офлайн-запуск игры", "Ещё не реализован")
                 }
             }
         }
@@ -194,15 +202,76 @@ private fun StatusLine(label: String, value: String) {
 
 @Composable
 private fun VersionsScreen() {
+    var loading by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<OfficialVersionCatalog?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val worker = remember {
+        Executors.newSingleThreadExecutor { task ->
+            Thread(task, "nova-official-catalog").apply { isDaemon = true }
+        }
+    }
+    DisposableEffect(worker) {
+        onDispose { worker.shutdownNow() }
+    }
+
     Column(
         Modifier.fillMaxSize().padding(22.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Версии Minecraft", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Каталог версий появится после реализации загрузчика официальных метаданных и проверки файлов. Сейчас список намеренно пуст — неподтверждённые версии не показываются.",
+            "Список загружается из официального публичного манифеста Mojang. Проверка каталога не устанавливает игру и не подтверждает наличие лицензии.",
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Button(
+            enabled = !loading,
+            onClick = {
+                loading = true
+                error = null
+                worker.execute {
+                    val outcome = runCatching { VersionCatalogRepository.fetch() }
+                    Handler(Looper.getMainLooper()).post {
+                        loading = false
+                        outcome.onSuccess { result = it }
+                            .onFailure { error = it.message ?: "Не удалось проверить каталог" }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (loading) "Проверка официального каталога…" else "Проверить версии")
+        }
+        if (loading) {
+            CircularProgressIndicator()
+        }
+        error?.let {
+            Card(shape = RoundedCornerShape(18.dp)) {
+                Text(
+                    it,
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        result?.let { catalog ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Официальный каталог проверен", fontWeight = FontWeight.Bold)
+                    StatusLine("Последний релиз", catalog.latestRelease)
+                    StatusLine("Последний snapshot", catalog.latestSnapshot)
+                    StatusLine("Записей в каталоге", catalog.versionCount.toString())
+                    Text(
+                        "Это сведения из метаданных. Установка файлов, запуск JVM и проверка аккаунта ещё не реализованы.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -228,7 +297,7 @@ private fun SettingsScreen(darkTheme: Boolean, onThemeChanged: (Boolean) -> Unit
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Сенсорное управление", fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Редактор джойстика и кнопок будет добавлен вместе с реальным игровым input bridge.",
+                    "Редактор джойстика и кнопок будет реализован вместе с настоящим игровым input bridge.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -244,38 +313,84 @@ private fun DiagnosticsScreen() {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
             context.packageManager.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL)
     }
+    val processorCount = remember { Runtime.getRuntime().availableProcessors() }
+    val socModel = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else Build.HARDWARE
+    }
+    val memory = remember {
+        val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        ActivityManager.MemoryInfo().also { manager.getMemoryInfo(it) }
+    }
+    val thermalStatus = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            power.currentThermalStatus.toString()
+        } else {
+            "API ниже 29"
+        }
+    }
     var glInfo by remember { mutableStateOf<GlProbeResult?>(null) }
 
-    Column(
+    LazyColumn(
         Modifier.fillMaxSize().padding(22.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Диагностика", fontSize = 26.sp, fontWeight = FontWeight.Bold)
-        AndroidView(
-            factory = { viewContext ->
-                GlProbeView(viewContext) { result -> glInfo = result }
-            },
-            modifier = Modifier.fillMaxWidth().height(2.dp)
-        )
-        Card(shape = RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatusLine("Android API", Build.VERSION.SDK_INT.toString())
-                StatusLine("Основная ABI", Build.SUPPORTED_ABIS.firstOrNull() ?: "Неизвестно")
-                StatusLine("Доступные ABI", Build.SUPPORTED_ABIS.joinToString())
-                StatusLine("GPU renderer", glInfo?.renderer ?: "Ожидание OpenGL ES…")
-                StatusLine("GL vendor", glInfo?.vendor ?: "Ожидание…")
-                StatusLine("OpenGL ES", glInfo?.version ?: "Ожидание…")
-                StatusLine("GLSL", glInfo?.shadingLanguage ?: "Ожидание…")
-                StatusLine("GL extensions", glInfo?.extensionCount?.toString() ?: "Ожидание…")
-                StatusLine("Vulkan feature", if (hasVulkanFeature) "Объявлена Android" else "Не объявлена")
+        item { Text("Диагностика", fontSize = 26.sp, fontWeight = FontWeight.Bold) }
+        item {
+            AndroidView(
+                factory = { viewContext ->
+                    GlProbeView(viewContext) { result -> glInfo = result }
+                },
+                modifier = Modifier.fillMaxWidth().height(2.dp)
+            )
+        }
+        item {
+            Card(shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Устройство", fontWeight = FontWeight.Bold)
+                    StatusLine("Производитель", Build.MANUFACTURER)
+                    StatusLine("Модель", Build.MODEL)
+                    StatusLine("SoC / hardware", socModel.ifBlank { "Неизвестно" })
+                    StatusLine("Android API", Build.VERSION.SDK_INT.toString())
+                    StatusLine("Основная ABI", Build.SUPPORTED_ABIS.firstOrNull() ?: "Неизвестно")
+                    StatusLine("Доступные ABI", Build.SUPPORTED_ABIS.joinToString())
+                    StatusLine("CPU logical cores", processorCount.toString())
+                    StatusLine("RAM всего", formatBytes(memory.totalMem))
+                    StatusLine("RAM доступно сейчас", formatBytes(memory.availMem))
+                    StatusLine("Thermal status", thermalStatus)
+                }
             }
         }
-        Text("Rust Core", fontWeight = FontWeight.Bold)
-        Text(coreStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            "Флаг Vulkan от Android не заменяет проверку создания Vulkan instance/device. GPU определяется из активного GL-контекста, а не по названию планшета.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
-        )
+        item {
+            Card(shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Графический контекст", fontWeight = FontWeight.Bold)
+                    StatusLine("GPU renderer", glInfo?.renderer ?: "Ожидание OpenGL ES…")
+                    StatusLine("GL vendor", glInfo?.vendor ?: "Ожидание…")
+                    StatusLine("OpenGL ES", glInfo?.version ?: "Ожидание…")
+                    StatusLine("GLSL", glInfo?.shadingLanguage ?: "Ожидание…")
+                    StatusLine("GL extensions", glInfo?.extensionCount?.toString() ?: "Ожидание…")
+                    StatusLine(
+                        "Vulkan feature",
+                        if (hasVulkanFeature) "Объявлена Android; device ещё не проверен" else "Не объявлена"
+                    )
+                }
+            }
+        }
+        item {
+            Text("Rust Core", fontWeight = FontWeight.Bold)
+            Text(coreStatus, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "GPU и GL-строки читаются из активного EGL-контекста. Vulkan пока только проверяется на наличие системной feature: создание Vulkan instance/device ещё не реализовано.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
+        }
     }
+}
+
+private fun formatBytes(value: Long): String {
+    if (value <= 0L) return "Неизвестно"
+    val mib = value.toDouble() / (1024.0 * 1024.0)
+    return String.format(java.util.Locale.ROOT, "%.0f MiB", mib)
 }

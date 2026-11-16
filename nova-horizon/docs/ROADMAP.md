@@ -7,22 +7,28 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [x] Kotlin Android shell
 - [x] Rust JNI library
 - [x] Frame-time sample window and unit tests
-- [x] Generic priority queue and unit tests
+- [x] Generic priority queue with coordinate deduplication and generation invalidation
 - [x] Validated Mojang version manifest parser and hostile-host tests
+- [x] Official manifest HTTPS retrieval from Android
+- [x] Real EGL/OpenGL ES context probe
+- [x] Android ABI, CPU, memory and thermal diagnostics
 - [x] ARM64 debug CI build definition
-- [ ] First successful GitHub Actions run
+- [ ] First successful end-to-end Android ARM64 APK CI run
 
 ## Phase 1 — device and graphics capability inventory
-- [ ] CPU ABI and core inventory
-- [ ] EGL/OpenGL ES capability probe
-- [ ] Vulkan capability probe when available
-- [ ] Mali driver identification without hard-coded model assumptions
-- [ ] Perfetto trace collection guide
+- [x] CPU ABI and logical core inventory
+- [x] EGL/OpenGL ES capability probe
+- [x] Device GPU renderer/vendor identification through GL context
+- [x] Public Android Vulkan feature flag (not Vulkan device creation)
+- [ ] Vulkan instance/device/queue/extension probe
+- [ ] Mali driver-specific validation on physical hardware
+- [ ] Perfetto trace collection and repeatable benchmark harness
 
 ## Phase 2 — installation and account foundation
-- [ ] Official version metadata parser
-- [ ] Download manifest model and hash verification
-- [ ] Resumable downloads and safe staging
+- [x] Public official version index retrieval and native validation
+- [ ] Per-version metadata retrieval and schema validation
+- [ ] Download manifest model and SHA-1/SHA-256 verification
+- [ ] Resumable downloads, cancellation and safe staging
 - [ ] Microsoft OAuth authorization-code flow with PKCE
 - [ ] Keystore-backed token storage
 - [ ] Offline launcher state machine
