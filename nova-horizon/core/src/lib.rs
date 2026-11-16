@@ -2,6 +2,7 @@ pub mod chunk_queue;
 pub mod download_state;
 pub mod frame_time;
 pub mod version_manifest;
+pub mod version_metadata;
 
 use jni::objects::{JObject, JString};
 use jni::sys::jstring;
@@ -15,7 +16,7 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeCoreStatus(
     _this: JObject,
 ) -> jstring {
     let status = format!(
-        "NOVA Rust Core 0.1.0-dev · arch={} · modules=frame-time,priority-queue,download-state,version-manifest",
+        "NOVA Rust Core 0.1.0-dev · arch={} · modules=frame-time,priority-queue,download-state,version-manifest,version-metadata",
         std::env::consts::ARCH
     );
 
@@ -26,7 +27,6 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeCoreStatus(
 }
 
 /// Validates the official Mojang version index and returns a compact JNI-safe result.
-/// The parser rejects unknown metadata hosts and malformed or duplicate version entries.
 #[no_mangle]
 pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeInspectVersionManifest(
     mut env: JNIEnv,
