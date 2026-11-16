@@ -211,9 +211,7 @@ impl DownloadTaskState {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        DownloadFailure, DownloadState, DownloadTaskState, DownloadTransitionError,
-    };
+    use super::{DownloadFailure, DownloadState, DownloadTaskState, DownloadTransitionError};
 
     #[test]
     fn transfer_must_finish_before_verification() {
@@ -292,10 +290,7 @@ mod tests {
         let mut other = DownloadTaskState::new(2);
         other.start().unwrap();
         other.fail(DownloadFailure::Protocol, false).unwrap();
-        assert_eq!(
-            other.retry(),
-            Err(DownloadTransitionError::NotRetryable)
-        );
+        assert_eq!(other.retry(), Err(DownloadTransitionError::NotRetryable));
     }
 
     #[test]
