@@ -9,7 +9,7 @@ use jni::JNIEnv;
 /// This reports the native module only; it does not claim that a game runtime exists.
 #[no_mangle]
 pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeCoreStatus(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _this: JObject,
 ) -> jstring {
     let status = format!(
