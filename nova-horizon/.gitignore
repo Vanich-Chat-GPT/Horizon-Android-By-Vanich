@@ -1,0 +1,7 @@
+**/build/
+**/.gradle/
+**/target/
+local.properties
+*.iml
+.idea/
+app/src/main/jniLibs/
