@@ -1,4 +1,5 @@
 pub mod chunk_queue;
+pub mod download_state;
 pub mod frame_time;
 pub mod version_manifest;
 
@@ -14,7 +15,7 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeCoreStatus(
     _this: JObject,
 ) -> jstring {
     let status = format!(
-        "NOVA Rust Core 0.1.0-dev · arch={} · modules=frame-time,priority-queue,version-manifest",
+        "NOVA Rust Core 0.1.0-dev · arch={} · modules=frame-time,priority-queue,download-state,version-manifest",
         std::env::consts::ARCH
     );
 

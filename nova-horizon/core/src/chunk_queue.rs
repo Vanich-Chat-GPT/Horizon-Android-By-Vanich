@@ -88,14 +88,15 @@ impl ChunkWorkQueue {
     }
 
     fn compact_if_needed(&mut self) {
-        let active = self.active.len();
-        let threshold = active.saturating_mul(2).saturating_add(64);
+        let active_count = self.active.len();
+        let threshold = active_count.saturating_mul(2).saturating_add(64);
         if self.heap.len() <= threshold {
             return;
         }
 
         let active = &self.active;
-        self.heap.retain(|job| active.get(&job.key) == Some(&(job.generation, job.sequence)));
+        self.heap
+            .retain(|job| active.get(&job.key) == Some(&(job.generation, job.sequence)));
     }
 }
 

@@ -8,6 +8,7 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [x] Rust JNI library
 - [x] Frame-time sample window and unit tests
 - [x] Generic priority queue with coordinate deduplication and generation invalidation
+- [x] Download state machine with monotonic progress, retries and verification transitions
 - [x] Validated Mojang version manifest parser and hostile-host tests
 - [x] Official manifest HTTPS retrieval from Android
 - [x] Real EGL/OpenGL ES context probe
@@ -26,6 +27,7 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 
 ## Phase 2 — installation and account foundation
 - [x] Public official version index retrieval and native validation
+- [x] Download state model (not yet a network/file downloader)
 - [ ] Per-version metadata retrieval and schema validation
 - [ ] Download manifest model and SHA-1/SHA-256 verification
 - [ ] Resumable downloads, cancellation and safe staging

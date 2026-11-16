@@ -5,6 +5,7 @@
 - Formatting: cargo fmt --check
 - Lints: cargo clippy --all-targets -- -D warnings
 - Official manifest parser tests, including malformed IDs, duplicate IDs, invalid hashes and untrusted metadata hosts
+- Download state machine tests for legal transitions, byte-count monotonicity, retry offsets and verification
 - Android ARM64 debug build through GitHub Actions
 - APK package/ABI inspection after successful build
 
@@ -14,6 +15,13 @@
 - Response size is capped before UTF-8 decoding.
 - Rust Core validates identifiers, duplicate entries, SHA-1 shape, official metadata URL prefix and latest-version references.
 - Catalog presence is not proof of game-file installation, entitlement or runtime compatibility.
+
+## Download state validation
+- The Rust state machine does not perform network I/O or write files.
+- Network retries preserve the last recorded byte offset; integrity retries reset it.
+- A transfer cannot enter verification while a known content length remains incomplete.
+- Only verified tasks can become Complete.
+- The Android worker must separately validate HTTP Range/ETag semantics, file staging, fsync/atomic promotion and trusted hashes before this state model is connected to actual downloads.
 
 ## Physical-device matrix
 Record device model, Android build, ABI, SoC, GPU/driver, available RAM, battery state and ambient/thermal state.
