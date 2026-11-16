@@ -74,13 +74,10 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeInspectVersionMe
                                 .java_version
                                 .as_ref()
                                 .map(|runtime| runtime.major_version);
-                            let asset_index_id = metadata
-                                .asset_index
-                                .as_ref()
-                                .map(|index| index.id.clone());
-                            let client_size = metadata
-                                .client_download()
-                                .map(|artifact| artifact.size);
+                            let asset_index_id =
+                                metadata.asset_index.as_ref().map(|index| index.id.clone());
+                            let client_size =
+                                metadata.client_download().map(|artifact| artifact.size);
                             let library_count = metadata.library_count();
 
                             serde_json::json!({
