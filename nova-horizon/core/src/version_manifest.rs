@@ -43,8 +43,7 @@ impl VersionManifest {
     /// Parse and validate the public Mojang Java version manifest.
     /// This function does not download game files or authorize an account.
     pub fn parse(json: &str) -> Result<Self, ManifestError> {
-        let manifest: Self =
-            serde_json::from_str(json).map_err(|_| ManifestError::InvalidJson)?;
+        let manifest: Self = serde_json::from_str(json).map_err(|_| ManifestError::InvalidJson)?;
 
         if manifest.versions.is_empty() {
             return Err(ManifestError::EmptyVersions);
@@ -74,9 +73,7 @@ impl VersionManifest {
                 return Err(ManifestError::UntrustedMetadataUrl);
             }
 
-            if version.sha1.len() != 40
-                || !version.sha1.bytes().all(|b| b.is_ascii_hexdigit())
-            {
+            if version.sha1.len() != 40 || !version.sha1.bytes().all(|b| b.is_ascii_hexdigit()) {
                 return Err(ManifestError::InvalidSha1);
             }
         }
@@ -132,7 +129,7 @@ mod tests {
     fn rejects_untrusted_metadata_host() {
         let hostile = VALID.replace(
             "https://piston-meta.mojang.com/",
-            "https://example.invalid/"
+            "https://example.invalid/",
         );
         assert_eq!(
             VersionManifest::parse(&hostile).unwrap_err(),
@@ -142,10 +139,7 @@ mod tests {
 
     #[test]
     fn rejects_duplicate_ids() {
-        let duplicate = VALID.replace(
-            "\"id\":\"24w01a\"",
-            "\"id\":\"1.21.1\""
-        );
+        let duplicate = VALID.replace("\"id\":\"24w01a\"", "\"id\":\"1.21.1\"");
         assert_eq!(
             VersionManifest::parse(&duplicate).unwrap_err(),
             ManifestError::DuplicateVersionId
