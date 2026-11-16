@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,6 +28,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -202,75 +204,178 @@ private fun StatusLine(label: String, value: String) {
 
 @Composable
 private fun VersionsScreen() {
-    var loading by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf<OfficialVersionCatalog?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var loadingCatalog by remember { mutableStateOf(false) }
+    var catalog by remember { mutableStateOf<OfficialVersionCatalog?>(null) }
+    var catalogError by remember { mutableStateOf<String?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var inspectingId by remember { mutableStateOf<String?>(null) }
+    var metadata by remember { mutableStateOf<VersionMetadataSummary?>(null) }
+    var metadataError by remember { mutableStateOf<String?>(null) }
+
     val worker = remember {
         Executors.newSingleThreadExecutor { task ->
-            Thread(task, "nova-official-catalog").apply { isDaemon = true }
+            Thread(task, "nova-version-metadata").apply { isDaemon = true }
         }
     }
     DisposableEffect(worker) {
         onDispose { worker.shutdownNow() }
     }
 
+    val visibleVersions = remember(catalog, query) {
+        val normalizedQuery = query.trim()
+        catalog?.versions
+            ?.filter { normalizedQuery.isEmpty() || it.id.contains(normalizedQuery, ignoreCase = true) }
+            .orEmpty()
+    }
+
     Column(
         Modifier.fillMaxSize().padding(22.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text("Версии Minecraft", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Список загружается из официального публичного манифеста Mojang. Проверка каталога не устанавливает игру и не подтверждает наличие лицензии.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            "Каталог берётся с официального сервера Mojang и проверяется Rust Core. Выбор версии пока проверяет только её метаданные — игровые файлы не скачиваются.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 13.sp
         )
         Button(
-            enabled = !loading,
+            enabled = !loadingCatalog && inspectingId == null,
             onClick = {
-                loading = true
-                error = null
+                loadingCatalog = true
+                catalogError = null
+                metadata = null
+                metadataError = null
                 worker.execute {
                     val outcome = runCatching { VersionCatalogRepository.fetch() }
                     Handler(Looper.getMainLooper()).post {
-                        loading = false
-                        outcome.onSuccess { result = it }
-                            .onFailure { error = it.message ?: "Не удалось проверить каталог" }
+                        loadingCatalog = false
+                        outcome.onSuccess {
+                            catalog = it
+                            query = ""
+                        }.onFailure {
+                            catalogError = it.message ?: "Не удалось проверить каталог"
+                        }
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (loading) "Проверка официального каталога…" else "Проверить версии")
+            Text(if (loadingCatalog) "Получение официального каталога…" else "Обновить каталог версий")
         }
-        if (loading) {
+
+        if (loadingCatalog) {
             CircularProgressIndicator()
         }
-        error?.let {
-            Card(shape = RoundedCornerShape(18.dp)) {
-                Text(
-                    it,
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
+        catalogError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
         }
-        result?.let { catalog ->
+
+        catalog?.let { current ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Официальный каталог проверен", fontWeight = FontWeight.Bold)
+                    StatusLine("Последний релиз", current.latestRelease)
+                    StatusLine("Последний snapshot", current.latestSnapshot)
+                    StatusLine("Всего версий", current.versionCount.toString())
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            enabled = catalog != null,
+            singleLine = true,
+            label = { Text("Поиск версии") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        metadata?.let { info ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Официальный каталог проверен", fontWeight = FontWeight.Bold)
-                    StatusLine("Последний релиз", catalog.latestRelease)
-                    StatusLine("Последний snapshot", catalog.latestSnapshot)
-                    StatusLine("Записей в каталоге", catalog.versionCount.toString())
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Метаданные проверены: " + info.id, fontWeight = FontWeight.Bold)
+                    StatusLine("Тип", info.type)
+                    StatusLine("Java", info.javaMajor?.toString() ?: "Не указан")
+                    StatusLine("Главный класс", info.mainClass)
+                    StatusLine("Asset index", info.assetIndexId ?: "Не указан")
+                    StatusLine("Размер client JAR", info.clientSize?.let(::formatBytes) ?: "Не указан")
+                    StatusLine("Библиотек", info.libraryCount.toString())
                     Text(
-                        "Это сведения из метаданных. Установка файлов, запуск JVM и проверка аккаунта ещё не реализованы.",
+                        "Проверен SHA-1 JSON-файла. Сами JAR и библиотеки ещё не загружались.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
             }
+        }
+        metadataError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+        }
+
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(visibleVersions, key = { it.id }) { version ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(version.id, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Text(version.type, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+                        }
+                        Text(
+                            version.releaseTime,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                        Button(
+                            enabled = inspectingId == null && !loadingCatalog,
+                            onClick = {
+                                inspectingId = version.id
+                                metadata = null
+                                metadataError = null
+                                worker.execute {
+                                    val outcome = runCatching {
+                                        VersionCatalogRepository.inspectVersion(version)
+                                    }
+                                    Handler(Looper.getMainLooper()).post {
+                                        inspectingId = null
+                                        outcome.onSuccess { metadata = it }
+                                            .onFailure {
+                                                metadataError = it.message
+                                                    ?: "Не удалось проверить метаданные версии"
+                                            }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                if (inspectingId == version.id) "Проверка…" else "Проверить метаданные"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (catalog != null && visibleVersions.isEmpty()) {
+            Text("Версии по этому запросу не найдены.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -391,6 +496,11 @@ private fun DiagnosticsScreen() {
 
 private fun formatBytes(value: Long): String {
     if (value <= 0L) return "Неизвестно"
+    if (value < 1024L) return "$value B"
+    if (value < 1024L * 1024L) {
+        val kib = value.toDouble() / 1024.0
+        return String.format(java.util.Locale.ROOT, "%.1f KiB", kib)
+    }
     val mib = value.toDouble() / (1024.0 * 1024.0)
-    return String.format(java.util.Locale.ROOT, "%.0f MiB", mib)
+    return String.format(java.util.Locale.ROOT, "%.1f MiB", mib)
 }

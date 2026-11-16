@@ -1,21 +1,21 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 const OFFICIAL_METADATA_PREFIX: &str = "https://piston-meta.mojang.com/";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct VersionManifest {
     pub latest: LatestVersions,
     pub versions: Vec<VersionEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct LatestVersions {
     pub release: String,
     pub snapshot: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct VersionEntry {
     pub id: String,
     #[serde(rename = "type")]

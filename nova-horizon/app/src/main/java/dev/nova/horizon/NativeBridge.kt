@@ -6,7 +6,8 @@ object NativeBridge {
     }.exceptionOrNull()?.message
 
     external fun nativeCoreStatus(): String
-    private external fun nativeInspectVersionManifest(json: String): String
+    private external fun nativeParseVersionCatalog(json: String): String
+    private external fun nativeInspectVersionMetadata(json: String, expectedId: String): String
 
     fun status(): String {
         val failure = loadFailure
@@ -15,11 +16,20 @@ object NativeBridge {
             .getOrElse { "Ошибка JNI: " + (it.message ?: "неизвестная ошибка") }
     }
 
-    fun inspectVersionManifest(json: String): String {
+    fun parseVersionCatalog(json: String): String {
+        ensureLoaded()
+        return nativeParseVersionCatalog(json)
+    }
+
+    fun inspectVersionMetadata(json: String, expectedId: String): String {
+        ensureLoaded()
+        return nativeInspectVersionMetadata(json, expectedId)
+    }
+
+    private fun ensureLoaded() {
         val failure = loadFailure
         if (failure != null) {
             throw IllegalStateException("Rust Core недоступен: " + failure)
         }
-        return nativeInspectVersionManifest(json)
     }
 }

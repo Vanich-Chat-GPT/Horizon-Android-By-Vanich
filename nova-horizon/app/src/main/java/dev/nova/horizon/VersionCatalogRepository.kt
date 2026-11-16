@@ -4,107 +4,220 @@ import java.io.ByteArrayOutputStream
 import java.net.URI
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.util.Locale
 import javax.net.ssl.HttpsURLConnection
+import org.json.JSONObject
+
+internal data class OfficialVersion(
+    val id: String,
+    val type: String,
+    val metadataUrl: String,
+    val sha1: String,
+    val releaseTime: String,
+    val complianceLevel: Int?
+)
 
 internal data class OfficialVersionCatalog(
     val latestRelease: String,
     val latestSnapshot: String,
-    val versionCount: Int
+    val versions: List<OfficialVersion>
+) {
+    val versionCount: Int get() = versions.size
+}
+
+internal data class VersionMetadataSummary(
+    val id: String,
+    val type: String,
+    val mainClass: String,
+    val javaMajor: Int?,
+    val assetIndexId: String?,
+    val clientSize: Long?,
+    val libraryCount: Int
 )
 
 /**
- * Reads Mojang's public version index only. This class does not install game files,
- * grant an account entitlement, or claim that a version can run on this device.
+ * Reads Mojang's public version index and selected per-version JSON metadata.
+ *
+ * This class does not install game files or grant an account entitlement. Per-version
+ * JSON is accepted only when its bytes match the SHA-1 declared by the official index.
  */
 internal object VersionCatalogRepository {
     private const val MANIFEST_URL =
         "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
     private const val OFFICIAL_HOST = "piston-meta.mojang.com"
-    private const val MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+    private const val MAX_MANIFEST_BYTES = 8 * 1024 * 1024
+    private const val MAX_VERSION_METADATA_BYTES = 16 * 1024 * 1024
 
     fun fetch(): OfficialVersionCatalog {
-        val body = downloadOfficialManifest()
-        val nativeResult = NativeBridge.inspectVersionManifest(body)
-        val fields = nativeResult.split('|')
-
-        if (fields.firstOrNull() != "OK" || fields.size != 4) {
-            val detail = fields.drop(1).joinToString(" ").ifBlank { "Неизвестная ошибка проверки" }
-            throw IllegalStateException("Проверка Rust Core отклонена: " + detail)
+        val body = downloadOfficial(
+            MANIFEST_URL,
+            maxBytes = MAX_MANIFEST_BYTES,
+            expectedSha1 = null
+        )
+        val normalized = JSONObject(
+            NativeBridge.parseVersionCatalog(String(body, StandardCharsets.UTF_8))
+        )
+        if (normalized.has("ok") && !normalized.optBoolean("ok")) {
+            throw IllegalStateException(
+                "Rust Core отклонил официальный каталог: " + normalized.optString("error")
+            )
         }
 
-        val release = fields[1]
-        val snapshot = fields[2]
-        val count = fields[3].toIntOrNull()
-            ?: throw IllegalStateException("Rust Core вернул некорректное количество версий")
-
-        if (release.isBlank() || snapshot.isBlank() || count <= 0) {
-            throw IllegalStateException("Официальный каталог не прошёл проверку")
+        val latest = normalized.getJSONObject("latest")
+        val entries = normalized.getJSONArray("versions")
+        val versions = ArrayList<OfficialVersion>(entries.length())
+        for (index in 0 until entries.length()) {
+            val entry = entries.getJSONObject(index)
+            val id = entry.getString("id")
+            val url = entry.getString("url")
+            val sha1 = entry.getString("sha1")
+            if (!isValidVersionId(id) || !isSha1(sha1)) {
+                throw SecurityException("Rust Core вернул некорректную запись версии")
+            }
+            validateOfficialUrl(URL(url))
+            versions += OfficialVersion(
+                id = id,
+                type = entry.getString("type"),
+                metadataUrl = url,
+                sha1 = sha1.lowercase(Locale.ROOT),
+                releaseTime = entry.getString("releaseTime"),
+                complianceLevel = if (entry.isNull("complianceLevel")) {
+                    null
+                } else {
+                    entry.optInt("complianceLevel")
+                }
+            )
         }
 
-        return OfficialVersionCatalog(release, snapshot, count)
+        if (versions.isEmpty()) {
+            throw IllegalStateException("Официальный каталог не содержит версий")
+        }
+
+        return OfficialVersionCatalog(
+            latestRelease = latest.getString("release"),
+            latestSnapshot = latest.getString("snapshot"),
+            versions = versions
+        )
     }
 
-    private fun downloadOfficialManifest(): String {
-        var currentUrl = URL(MANIFEST_URL)
-        repeat(4) { redirectCount ->
+    /**
+     * Downloads and checks only the selected version descriptor, not the game JARs.
+     * The expected SHA-1 comes from the validated official version index.
+     */
+    fun inspectVersion(version: OfficialVersion): VersionMetadataSummary {
+        val bytes = downloadOfficial(
+            version.metadataUrl,
+            maxBytes = MAX_VERSION_METADATA_BYTES,
+            expectedSha1 = version.sha1
+        )
+        val native = JSONObject(
+            NativeBridge.inspectVersionMetadata(
+                String(bytes, StandardCharsets.UTF_8),
+                version.id
+            )
+        )
+        if (!native.optBoolean("ok", false)) {
+            throw SecurityException(
+                "Метаданные версии " + version.id + " отклонены: " +
+                    native.optString("error", "неизвестная ошибка")
+            )
+        }
+
+        return VersionMetadataSummary(
+            id = native.getString("id"),
+            type = native.getString("versionType"),
+            mainClass = native.getString("mainClass"),
+            javaMajor = if (native.isNull("javaMajor")) null else native.optInt("javaMajor"),
+            assetIndexId = if (native.isNull("assetIndexId")) null else native.optString("assetIndexId"),
+            clientSize = if (native.isNull("clientSize")) null else native.optLong("clientSize"),
+            libraryCount = native.optInt("libraryCount")
+        )
+    }
+
+    private fun downloadOfficial(
+        address: String,
+        maxBytes: Int,
+        expectedSha1: String?
+    ): ByteArray {
+        var currentUrl = URL(address)
+        for (redirectCount in 0..3) {
             validateOfficialUrl(currentUrl)
-            val connection = (currentUrl.openConnection() as HttpsURLConnection).apply {
-                connectTimeout = 12_000
-                readTimeout = 20_000
-                requestMethod = "GET"
-                instanceFollowRedirects = false
-                setRequestProperty("Accept", "application/json")
-                setRequestProperty("User-Agent", "NOVA-HORIZON/0.1.0-dev (Android)")
-            }
+            val connection = currentUrl.openConnection() as HttpsURLConnection
+            connection.connectTimeout = 12_000
+            connection.readTimeout = 25_000
+            connection.requestMethod = "GET"
+            connection.instanceFollowRedirects = false
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("User-Agent", "NOVA-HORIZON/0.1.0-dev (Android)")
 
             try {
                 val status = connection.responseCode
                 if (status in 300..399) {
                     if (redirectCount == 3) {
-                        throw IllegalStateException("Слишком много перенаправлений официального каталога")
+                        throw IllegalStateException("Слишком много перенаправлений Mojang")
                     }
                     val location = connection.getHeaderField("Location")
-                        ?: throw IllegalStateException("Сервер вернул перенаправление без адреса")
+                        ?: throw IllegalStateException("Перенаправление без адреса")
                     currentUrl = URL(currentUrl, location)
                     validateOfficialUrl(currentUrl)
-                    return@repeat
+                    continue
                 }
                 if (status !in 200..299) {
-                    throw IllegalStateException(
-                        "Официальный каталог вернул HTTP " + status
-                    )
+                    throw IllegalStateException("Сервер Mojang вернул HTTP " + status)
                 }
 
+                val contentLength = connection.contentLengthLong
+                if (contentLength > maxBytes) {
+                    throw IllegalStateException("Ответ Mojang превышает допустимый размер")
+                }
                 val contentType = connection.contentType.orEmpty()
                 if (contentType.isNotBlank() &&
-                    !contentType.lowercase().startsWith("application/json")
+                    !contentType.lowercase(Locale.ROOT).startsWith("application/json")
                 ) {
-                    throw IllegalStateException(
-                        "Неожиданный тип ответа каталога: " + contentType
-                    )
+                    throw IllegalStateException("Неожиданный тип ответа Mojang: " + contentType)
                 }
 
                 val bytes = connection.inputStream.use { input ->
-                    val output = ByteArrayOutputStream()
+                    val output = ByteArrayOutputStream(
+                        if (contentLength in 1..maxBytes.toLong()) contentLength.toInt() else 32 * 1024
+                    )
                     val buffer = ByteArray(16 * 1024)
                     var total = 0
                     while (true) {
                         val read = input.read(buffer)
                         if (read < 0) break
                         total += read
-                        if (total > MAX_RESPONSE_BYTES) {
-                            throw IllegalStateException("Ответ каталога превышает допустимый размер")
+                        if (total > maxBytes) {
+                            throw IllegalStateException("Ответ Mojang превышает допустимый размер")
                         }
                         output.write(buffer, 0, read)
                     }
                     output.toByteArray()
                 }
-                return String(bytes, StandardCharsets.UTF_8)
+
+                if (contentLength >= 0 && bytes.size.toLong() != contentLength) {
+                    throw IllegalStateException("Размер ответа не совпадает с Content-Length")
+                }
+                if (expectedSha1 != null) {
+                    if (!isSha1(expectedSha1)) {
+                        throw SecurityException("Некорректная ожидаемая SHA-1")
+                    }
+                    val actual = sha1(bytes)
+                    if (!MessageDigest.isEqual(
+                            actual.toByteArray(StandardCharsets.US_ASCII),
+                            expectedSha1.lowercase(Locale.ROOT).toByteArray(StandardCharsets.US_ASCII)
+                        )
+                    ) {
+                        throw SecurityException("SHA-1 метаданных версии не совпадает с официальным индексом")
+                    }
+                }
+                return bytes
             } finally {
                 connection.disconnect()
             }
         }
-        throw IllegalStateException("Не удалось получить официальный каталог версий")
+        throw IllegalStateException("Не удалось получить данные с официального сервера Mojang")
     }
 
     private fun validateOfficialUrl(url: URL) {
@@ -112,9 +225,27 @@ internal object VersionCatalogRepository {
         if (!uri.scheme.equals("https", ignoreCase = true) ||
             !uri.host.equals(OFFICIAL_HOST, ignoreCase = true) ||
             uri.userInfo != null ||
+            uri.rawFragment != null ||
             (uri.port != -1 && uri.port != 443)
         ) {
             throw SecurityException("Заблокирован недоверенный адрес метаданных Minecraft")
         }
     }
+
+    private fun isValidVersionId(value: String): Boolean =
+        value.isNotEmpty() && value.length <= 64 &&
+            value.all {
+                it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' ||
+                    it == '.' || it == '_' || it == '-'
+            }
+
+    private fun isSha1(value: String): Boolean =
+        value.length == 40 && value.all { it in '0'..'9' || it.lowercaseChar() in 'a'..'f' }
+
+    private fun sha1(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-1")
+            .digest(bytes)
+            .joinToString("") { byte ->
+                "%02x".format(Locale.ROOT, byte.toInt() and 0xff)
+            }
 }
