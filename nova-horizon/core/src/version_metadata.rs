@@ -98,8 +98,7 @@ impl VersionMetadata {
             return Err(MetadataError::TooLarge);
         }
 
-        let metadata: Self =
-            serde_json::from_str(json).map_err(|_| MetadataError::InvalidJson)?;
+        let metadata: Self = serde_json::from_str(json).map_err(|_| MetadataError::InvalidJson)?;
 
         if !valid_id(&metadata.id) {
             return Err(MetadataError::InvalidVersionId);
@@ -176,7 +175,8 @@ impl VersionMetadata {
 fn valid_id(id: &str) -> bool {
     !id.is_empty()
         && id.len() <= 64
-        && id.bytes()
+        && id
+            .bytes()
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
 }
 
@@ -192,9 +192,8 @@ fn valid_library_name(name: &str) -> bool {
         && !version.is_empty()
         && extra.is_none()
         && [group, artifact, version].iter().all(|part| {
-            part.bytes().all(|b| {
-                b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'+')
-            })
+            part.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'+'))
         })
 }
 
@@ -328,10 +327,7 @@ mod tests {
 
     #[test]
     fn rejects_invalid_sha256() {
-        let hostile = VALID.replace(
-            "\"size\":1000,",
-            "\"sha256\":\"not-a-hash\",\"size\":1000,",
-        );
+        let hostile = VALID.replace("\"size\":1000,", "\"sha256\":\"not-a-hash\",\"size\":1000,");
         assert_eq!(
             VersionMetadata::parse(&hostile, "1.20.1").unwrap_err(),
             MetadataError::InvalidSha256
