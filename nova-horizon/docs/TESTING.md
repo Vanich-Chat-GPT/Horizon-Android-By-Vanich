@@ -14,6 +14,7 @@
 - Redirects are limited and restricted to the same official host.
 - Response size is capped before UTF-8 decoding.
 - Rust Core validates identifiers, duplicate entries, SHA-1 shape, official metadata URL prefix and latest-version references.
+- The Android UI receives the full catalogue only after Rust validation; each entry's metadata JSON must match its manifest SHA-1 before the Rust version-specific schema validator accepts it.
 - Catalog presence is not proof of game-file installation, entitlement or runtime compatibility.
 
 ## Download state validation

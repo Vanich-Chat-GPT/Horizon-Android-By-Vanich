@@ -27,8 +27,9 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 
 ## Phase 2 — installation and account foundation
 - [x] Public official version index retrieval and native validation
+- [x] Full official version list, search and selection in Android UI
+- [x] Per-version metadata retrieval with official-index SHA-1 verification and Rust schema validation
 - [x] Download state model (not yet a network/file downloader)
-- [ ] Per-version metadata retrieval and schema validation
 - [ ] Download manifest model and SHA-1/SHA-256 verification
 - [ ] Resumable downloads, cancellation and safe staging
 - [ ] Microsoft OAuth authorization-code flow with PKCE
