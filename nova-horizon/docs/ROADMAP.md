@@ -8,6 +8,7 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [x] Rust JNI library
 - [x] Frame-time sample window and unit tests
 - [x] Generic priority queue and unit tests
+- [x] Validated Mojang version manifest parser and hostile-host tests
 - [x] ARM64 debug CI build definition
 - [ ] First successful GitHub Actions run
 

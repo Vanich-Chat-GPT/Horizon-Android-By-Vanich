@@ -17,7 +17,7 @@
 ## Структура
 
 - `app/` — Kotlin + Jetpack Compose Android application.
-- `core/` — независимое Rust-ядро и JNI bridge.
+- `core/` — независимое Rust-ядро, JNI bridge и валидатор официального version manifest.
 - `docs/` — архитектура, безопасность, этапы и тестовая матрица.
 - `THIRD_PARTY_NOTICES.md` — реестр используемых инструментов и зависимостей.
 
