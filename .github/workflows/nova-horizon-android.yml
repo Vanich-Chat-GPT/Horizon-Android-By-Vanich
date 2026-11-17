@@ -1,0 +1,107 @@
+name: NOVA HORIZON — Horizon Rust 26.3 Android
+
+on:
+  push:
+    branches:
+      - "nova-horizon/**"
+    paths:
+      - "nova-horizon/engine/**"
+      - ".github/workflows/nova-horizon-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nova-horizon-rust-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build the real Horizon Rust game for Android ARM64
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      HORIZON_ANDROID_COMMIT: 1788803beebf105abe58de72752d08a5f0e0ee76
+      ANDROID_NDK_VERSION: 27.2.12479018
+      HORIZON_ANDROID_PROFILE: android
+      HORIZON_ANDROID_JOBS: 4
+    steps:
+      - name: Checkout NOVA HORIZON integration
+        uses: actions/checkout@v4
+
+      - name: Fetch pinned Horizon Android source
+        run: |
+          set -euo pipefail
+          git init "$RUNNER_TEMP/horizon-android"
+          git -C "$RUNNER_TEMP/horizon-android" remote add origin https://github.com/MocLG/horizon-android.git
+          git -C "$RUNNER_TEMP/horizon-android" fetch --depth 1 origin "$HORIZON_ANDROID_COMMIT"
+          git -C "$RUNNER_TEMP/horizon-android" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/horizon-android" rev-parse HEAD)" = "$HORIZON_ANDROID_COMMIT"
+
+      - name: Apply NOVA HORIZON branding and update endpoint
+        run: python3 nova-horizon/engine/prepare_horizon_android.py "$RUNNER_TEMP/horizon-android"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Rust for Android ARM64
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK, NDK and host tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes python3 xz-utils zip
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Fetch and verify Gradle wrapper
+        working-directory: ${{ runner.temp }}/horizon-android
+        run: |
+          set -euo pipefail
+          jar=android/gradle/wrapper/gradle-wrapper.jar
+          curl -fsSL -o "$jar" https://raw.githubusercontent.com/gradle/gradle/v8.14.5/gradle/wrapper/gradle-wrapper.jar
+          echo "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172  $jar" | sha256sum -c -
+
+      - name: Build Horizon 26.3 ARM64 APK
+        working-directory: ${{ runner.temp }}/horizon-android
+        run: bash android/build.sh
+
+      - name: Verify the real game, Java helper and runtime are packaged
+        run: |
+          set -euo pipefail
+          APK=$(find "$RUNNER_TEMP/horizon-android/android/build" -maxdepth 1 -name 'horizon-*-android-arm64.apk' -type f -print -quit)
+          test -n "$APK"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "package: name='dev.nova.horizon'"
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libhorizon.so'
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libhorizonjava.so'
+          unzip -l "$APK" | grep -q 'assets/jre-25.zip'
+          unzip -l "$APK" | grep -q 'assets/horizon.zip'
+          mkdir -p nova-horizon/engine-output
+          cp "$APK" nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk
+          sha256sum nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk | tee nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk.sha256
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-horizon-26.3-arm64
+          path: |
+            nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk
+            nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
