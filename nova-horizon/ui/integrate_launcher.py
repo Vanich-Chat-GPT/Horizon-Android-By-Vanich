@@ -31,6 +31,158 @@ def main() -> None:
         raise SystemExit(f"Missing NOVA launcher UI source: {home_source}")
     shutil.copyfile(home_source, java_dir / "LauncherHome.java")
 
+    # The ongoing Android notification reports the measured receive rate for this app UID.
+    work_service = java_dir / "WorkService.java"
+    work_service.write_text("""package dev.nova.horizon;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ServiceInfo;
+import android.net.TrafficStats;
+import android.os.Build;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.Process;
+import android.os.SystemClock;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+
+public final class WorkService extends Service {
+    private static final String CHANNEL = "work";
+    private static final int NOTIFICATION = 1;
+    private static final Map<String, String> REASONS = new LinkedHashMap<>();
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private long lastRxBytes = -1;
+    private long lastSampleMs;
+    private boolean speedLoop;
+
+    private final Runnable speedUpdate = new Runnable() {
+        @Override public void run() {
+            if (!hasReasons()) {
+                speedLoop = false;
+                stopForeground(true);
+                stopSelf();
+                return;
+            }
+            long now = SystemClock.elapsedRealtime();
+            long bytes = TrafficStats.getUidRxBytes(Process.myUid());
+            String content = line();
+            if (bytes >= 0 && lastRxBytes >= 0 && lastSampleMs > 0 && now > lastSampleMs) {
+                long received = Math.max(0, bytes - lastRxBytes);
+                double mbPerSecond = received * 1000.0 / (now - lastSampleMs) / 1_000_000.0;
+                content += String.format(Locale.US, "  ·  %.1f MB/s", mbPerSecond);
+            }
+            lastRxBytes = bytes;
+            lastSampleMs = now;
+            NotificationManager manager =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) manager.notify(NOTIFICATION, buildNotification(content));
+            handler.postDelayed(this, 1000);
+        }
+    };
+
+    static void hold(Context context, String reason, String line, boolean on) {
+        boolean running;
+        synchronized (REASONS) {
+            if (on) {
+                REASONS.remove(reason);
+                REASONS.put(reason, line);
+            } else {
+                REASONS.remove(reason);
+            }
+            running = !REASONS.isEmpty();
+        }
+        Intent intent = new Intent(context, WorkService.class);
+        try {
+            if (running) {
+                if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent);
+                else context.startService(intent);
+            } else {
+                context.startService(intent);
+            }
+        } catch (RuntimeException ignored) {
+            // Android may refuse a foreground service started from the background.
+        }
+    }
+
+    private static boolean hasReasons() {
+        synchronized (REASONS) { return !REASONS.isEmpty(); }
+    }
+
+    private static String line() {
+        synchronized (REASONS) {
+            String last = "NOVA HORIZON выполняет задачу";
+            for (String value : REASONS.values()) last = value;
+            return last;
+        }
+    }
+
+    private Notification buildNotification(String content) {
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, CHANNEL)
+                : new Notification.Builder(this);
+        return builder.setSmallIcon(getApplicationInfo().icon)
+                .setContentTitle(getString(R.string.work_title))
+                .setContentText(content)
+                .setOngoing(true)
+                .build();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationManager manager =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) {
+                manager.createNotificationChannel(new NotificationChannel(
+                        CHANNEL, getString(R.string.work_channel), NotificationManager.IMPORTANCE_LOW));
+            }
+        }
+        try {
+            Notification notification = buildNotification(line());
+            if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(NOTIFICATION, notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } else {
+                startForeground(NOTIFICATION, notification);
+            }
+        } catch (RuntimeException e) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (!hasReasons()) {
+            handler.removeCallbacks(speedUpdate);
+            speedLoop = false;
+            stopForeground(true);
+            stopSelfResult(startId);
+        } else if (!speedLoop) {
+            lastRxBytes = TrafficStats.getUidRxBytes(Process.myUid());
+            lastSampleMs = SystemClock.elapsedRealtime();
+            speedLoop = true;
+            handler.postDelayed(speedUpdate, 1000);
+        }
+        return START_NOT_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        handler.removeCallbacks(speedUpdate);
+        speedLoop = false;
+        super.onDestroy();
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) { return null; }
+}
+""", encoding="utf-8")
+
     replace_once(
         activity,
         "public final class LauncherActivity extends Activity {",
