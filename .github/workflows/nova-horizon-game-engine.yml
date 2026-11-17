@@ -30,9 +30,7 @@ jobs:
       - name: Checkout pinned Android game engine and native submodules
         run: |
           set -euo pipefail
-          git clone https://github.com/AngelAuraMC/Amethyst-Android.git "$RUNNER_TEMP/amethyst"
-          git -C "$RUNNER_TEMP/amethyst" checkout --detach "$AMETHYST_COMMIT"
-          git -C "$RUNNER_TEMP/amethyst" submodule update --init --recursive
+          git clone --depth 1 --branch v3_openjdk --recurse-submodules --shallow-submodules https://github.com/AngelAuraMC/Amethyst-Android.git "$RUNNER_TEMP/amethyst"
           test "$(git -C "$RUNNER_TEMP/amethyst" rev-parse HEAD)" = "$AMETHYST_COMMIT"
 
       - name: Prepare NOVA HORIZON branding and application identity
