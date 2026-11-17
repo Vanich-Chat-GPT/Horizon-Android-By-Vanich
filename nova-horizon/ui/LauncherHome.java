@@ -181,9 +181,14 @@ final class LauncherHome {
             shape.setColor(i == 0 ? 0x443B2915 : 0x00000000);
             shape.setCornerRadius(dp(a, 12));
             icon.setBackground(shape);
-            icon.setClickable(true);
-            icon.setFocusable(true);
-            icon.setOnClickListener(v -> tasks[index].run());
+            if (i == 0) {
+                icon.setClickable(false);
+                icon.setFocusable(false);
+            } else {
+                icon.setClickable(true);
+                icon.setFocusable(true);
+                icon.setOnClickListener(v -> tasks[index].run());
+            }
             rail.addView(icon, new LinearLayout.LayoutParams(dp(a, 42), dp(a, 48)));
             addGap(a, rail, 7);
         }
