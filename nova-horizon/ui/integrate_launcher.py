@@ -590,6 +590,11 @@ pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::set
         let mut high = crate::settings::Settings::default();
         apply_mobile_defaults(Tier::High, &mut high);
         assert_eq!((low.max_fps, high.max_fps), (90, 90));
+        assert_eq!(low.language, "ru_ru");
+        assert!(matches!(
+            low.joystick_style.move_area,
+            crate::android_controls::JoystickMoveArea::AbsoluteFixed
+        ));
         assert_eq!((low.render_distance, high.render_distance), (8, 12));
         assert_eq!((low.clouds.as_str(), high.clouds.as_str()), ("true", "true"));
         assert_eq!((low.horizon.resolution_scale, high.horizon.resolution_scale), (100, 100));
