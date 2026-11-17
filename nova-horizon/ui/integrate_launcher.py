@@ -437,6 +437,15 @@ public final class WorkService extends Service {
         "            move_area: JoystickMoveArea::AbsoluteFixed,",
     )
 
+    # Upstream's Settings stores joystick_style inside the nested touch settings.
+    # Keep the mobile-default test aligned with that current schema.
+    graphics = root / "crates/horizon-client-render/src/graphics.rs"
+    graphics_source = graphics.read_text(encoding="utf-8")
+    graphics_source = graphics_source.replace(
+        "low.joystick_style.move_area", "low.touch.joystick_style.move_area"
+    )
+    graphics.write_text(graphics_source, encoding="utf-8")
+
     # New Android profiles start in Russian; existing saved language choices remain untouched.
     settings = root / "crates/horizon-client-render/src/settings.rs"
     replace_once(settings, '            language: "en_us".into(),', '            language: "ru_ru".into(),')
