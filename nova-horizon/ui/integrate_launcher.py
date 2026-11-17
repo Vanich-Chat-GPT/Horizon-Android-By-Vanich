@@ -306,6 +306,48 @@ public final class WorkService extends Service {
         'let name = format!("starling-{version}-{abi}.apk");',
         'let name = format!("NOVA-HORIZON-{version}-{abi}.apk");',
     )
+    old_update_test = """    #[test]
+    fn only_starlings_own_apk_is_an_update() {
+        // Horizon Android's last release, the organisation's latest today: not Starling's.
+        let horizon =
+            json!({"tag_name": "v0.7.8", "assets": [asset("Horizon-Android-0.7.8-arm64-v8a.apk")]});
+        assert_eq!(update_for_abi(&horizon, "0.2.2", "arm64-v8a"), None);
+        // A preview build is another app, signed with another key.
+        let preview = json!({"tag_name": "v0.8.0", "assets": [asset("starling-preview-0.8.0-arm64-v8a.apk")]});
+        assert_eq!(update_for_abi(&preview, "0.2.2", "arm64-v8a"), None);
+        let release = json!({"tag_name": "v0.8.0", "assets": [
+            asset("starling-preview-0.8.0-arm64-v8a.apk"),
+            asset("StarlingVisuals.zip"),
+            asset("starling-0.8.0-arm64-v8a.apk"),
+        ]});
+        let update = update_for_abi(&release, "0.2.2", "arm64-v8a").unwrap();
+        assert_eq!(update.version, "0.8.0");
+        assert_eq!(update.name, "starling-0.8.0-arm64-v8a.apk");
+        assert_eq!(update.sha256.as_deref(), Some("ab"));
+        assert_eq!(
+            update_for_abi(&release, "0.8.0", "arm64-v8a"),
+            None,
+            "not newer"
+        );
+    }"""
+    new_update_test = """    #[test]
+    fn only_nova_horizon_arm64_apk_is_an_update() {
+        let unrelated = json!({"tag_name": "v3.0.0", "assets": [asset("Horizon-Android-3.0.0-arm64-v8a.apk")]});
+        assert_eq!(update_for_abi(&unrelated, "2.9.9", "arm64-v8a"), None);
+        let preview = json!({"tag_name": "v3.0.0", "assets": [asset("NOVA-HORIZON-preview-3.0.0-arm64-v8a.apk")]});
+        assert_eq!(update_for_abi(&preview, "2.9.9", "arm64-v8a"), None);
+        let release = json!({"tag_name": "v3.0.0", "assets": [
+            asset("NOVA-HORIZON-preview-3.0.0-arm64-v8a.apk"),
+            asset("StarlingVisuals.zip"),
+            asset("NOVA-HORIZON-3.0.0-arm64-v8a.apk"),
+        ]});
+        let update = update_for_abi(&release, "2.9.9", "arm64-v8a").unwrap();
+        assert_eq!(update.version, "3.0.0");
+        assert_eq!(update.name, "NOVA-HORIZON-3.0.0-arm64-v8a.apk");
+        assert_eq!(update.sha256.as_deref(), Some("ab"));
+        assert_eq!(update_for_abi(&release, "3.0.0", "arm64-v8a"), None, "not newer");
+    }"""
+    replace_once(releases, old_update_test, new_update_test)
 
     # Static joystick is the first-run default; the user can still choose Follow Finger.
     layout = root / "crates/horizon-client-render/src/android_controls/layout.rs"
