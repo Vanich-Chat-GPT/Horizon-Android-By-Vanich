@@ -291,7 +291,9 @@ public final class WorkService extends Service {
     replace_once(
         build,
         '    zip_folder(HERE.parent / "lowbudget" / "pack", folder / "lowbudget.zip")',
-        '    shutil.copyfile(ROOT / "docs/media/night.webp", folder / "launcher-bg.webp")\n'
+        '    background = ROOT / "docs/media/night.webp"\n'
+        '    if background.is_file():\n'
+        '        shutil.copyfile(background, folder / "launcher-bg.webp")\n'
         '    zip_folder(HERE.parent / "lowbudget" / "pack", folder / "lowbudget.zip")',
     )
 
