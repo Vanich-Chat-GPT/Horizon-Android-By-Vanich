@@ -74,15 +74,6 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 3.5.4 --locked
 
-      - name: Validate Android source, diagnostics and mobile defaults
-        working-directory: ${{ runner.temp }}/starling
-        run: |
-          set -euo pipefail
-          python3 -m py_compile "$GITHUB_WORKSPACE/nova-horizon/engine/prepare_starling.py" "$GITHUB_WORKSPACE/nova-horizon/ui/integrate_launcher.py"
-          python3 -m unittest discover -s tests -p 'test_android*.py' -v
-          python3 tools/test_android_diagnostics.py
-          cargo test -p horizon-client-render --lib graphics::tests::mobile_defaults_keep_nearby_quality_and_cap_at_90_fps
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -100,6 +91,15 @@ jobs:
           sudo mkswap "$where/nova-horizon-build.swap" >/dev/null
           sudo swapon "$where/nova-horizon-build.swap"
           free -h
+
+      - name: Validate Android source, diagnostics and mobile defaults
+        working-directory: ${{ runner.temp }}/starling
+        run: |
+          set -euo pipefail
+          python3 -m py_compile "$GITHUB_WORKSPACE/nova-horizon/engine/prepare_starling.py" "$GITHUB_WORKSPACE/nova-horizon/ui/integrate_launcher.py"
+          python3 -m unittest discover -s tests -p 'test_android*.py' -v
+          python3 tools/test_android_diagnostics.py
+          cargo test -p horizon-client-render --lib graphics::tests::mobile_defaults_keep_nearby_quality_and_cap_at_90_fps
 
       - name: Build optimized Rust game and Android launcher
         working-directory: ${{ runner.temp }}/starling
