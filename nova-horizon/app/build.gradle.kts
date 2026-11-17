@@ -4,6 +4,19 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val microsoftClientId = providers.gradleProperty("MICROSOFT_CLIENT_ID")
+    .orElse(providers.environmentVariable("MICROSOFT_CLIENT_ID"))
+    .orElse("")
+    .get()
+    .trim()
+val microsoftRedirectHash = providers.gradleProperty("MICROSOFT_REDIRECT_SIGNATURE_HASH")
+    .orElse(providers.environmentVariable("MICROSOFT_REDIRECT_SIGNATURE_HASH"))
+    .orElse("")
+    .get()
+    .trim()
+val authConfigured = microsoftClientId.isNotBlank() && microsoftRedirectHash.isNotBlank()
+val msalResDirectory = layout.buildDirectory.dir("generated/msalConfig/res")
+
 android {
     namespace = "dev.nova.horizon"
     compileSdk = 36
@@ -17,6 +30,10 @@ android {
         ndk {
             abiFilters += "arm64-v8a"
         }
+        buildConfigField("String", "MICROSOFT_CLIENT_ID", "\"$microsoftClientId\"")
+        buildConfigField("String", "MICROSOFT_REDIRECT_SIGNATURE_HASH", "\"$microsoftRedirectHash\"")
+        buildConfigField("boolean", "MICROSOFT_AUTH_CONFIGURED", authConfigured.toString())
+        manifestPlaceholders["msalSignatureHash"] = microsoftRedirectHash.ifBlank { "UNCONFIGURED" }
     }
 
     compileOptions {
@@ -30,7 +47,10 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
+
+    sourceSets.getByName("main").res.srcDir(msalResDirectory)
 
     packaging {
         jniLibs {
@@ -39,7 +59,41 @@ android {
     }
 }
 
+val generateMsalConfig by tasks.registering {
+    val output = msalResDirectory.map { it.file("raw/msal_config.json") }
+    outputs.file(output)
+    doLast {
+        val file = output.get().asFile
+        file.parentFile.mkdirs()
+        val clientId = microsoftClientId.ifBlank { "00000000-0000-0000-0000-000000000000" }
+        val signatureHash = microsoftRedirectHash.ifBlank { "UNCONFIGURED" }
+        file.writeText(
+            """
+            {
+              "client_id": "$clientId",
+              "redirect_uri": "msauth://dev.nova.horizon/$signatureHash",
+              "account_mode": "MULTIPLE",
+              "authorities": [
+                {
+                  "type": "AAD",
+                  "audience": {
+                    "type": "AzureADandPersonalMicrosoftAccount",
+                    "tenant_id": "consumers"
+                  }
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(generateMsalConfig)
+}
+
 dependencies {
+    implementation("com.microsoft.identity.client:msal:8.6.0")
     implementation(platform("androidx.compose:compose-bom:2025.08.00"))
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.compose.ui:ui")

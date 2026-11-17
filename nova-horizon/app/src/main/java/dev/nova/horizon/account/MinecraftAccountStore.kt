@@ -17,6 +17,8 @@ internal object MinecraftAccountStore {
     private const val KEY_PROFILE_NAME = "profile_name"
     private const val KEY_ENTITLEMENT_AT = "entitlement_verified_at"
 
+    private const val ENTITLEMENT_MAX_AGE_MS = 24L * 60L * 60L * 1000L
+
     fun read(context: Context): MinecraftAccountStatus {
         val values = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val profileId = values.getString(KEY_PROFILE_ID, null)
@@ -30,7 +32,9 @@ internal object MinecraftAccountStore {
             profileId = profileId,
             profileName = profileName,
             entitlementVerifiedAtMillis = verifiedAt,
-            hasJavaEntitlement = verifiedAt != null && verifiedAt > 0L &&
+            hasJavaEntitlement = verifiedAt != null &&
+                verifiedAt <= System.currentTimeMillis() &&
+                System.currentTimeMillis() - verifiedAt <= ENTITLEMENT_MAX_AGE_MS &&
                 !profileId.isNullOrBlank() && !profileName.isNullOrBlank()
         )
     }
