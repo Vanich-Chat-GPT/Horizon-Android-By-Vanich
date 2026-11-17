@@ -113,39 +113,41 @@ internal object MicrosoftAuthManager {
 
     fun signOut(context: Context, callback: (Result<Unit>) -> Unit) {
         initialize(context) { initialized ->
-            initialized.onFailure {
-                callback(Result.failure(it))
-                return@initialize
-            }
-            val current = application ?: run {
-                callback(Result.failure(IllegalStateException("Microsoft OAuth недоступен.")))
-                return@initialize
-            }
-            current.getAccounts(object : IPublicClientApplication.LoadAccountsCallback {
-                override fun onTaskCompleted(accounts: List<IAccount>) {
-                    val account = accounts.firstOrNull()
-                    if (account == null) {
-                        callback(Result.success(Unit))
-                        return
-                    }
-                    current.removeAccount(
-                        account,
-                        object : IMultipleAccountPublicClientApplication.RemoveAccountCallback {
-                            override fun onRemoved() {
-                                callback(Result.success(Unit))
+            initialized.fold(
+                onSuccess = {
+                    val current = application
+                    if (current == null) {
+                        callback(Result.failure(IllegalStateException("Microsoft OAuth недоступен.")))
+                    } else {
+                        current.getAccounts(object : IPublicClientApplication.LoadAccountsCallback {
+                            override fun onTaskCompleted(accounts: List<IAccount>) {
+                                val account = accounts.firstOrNull()
+                                if (account == null) {
+                                    callback(Result.success(Unit))
+                                    return
+                                }
+                                current.removeAccount(
+                                    account,
+                                    object : IMultipleAccountPublicClientApplication.RemoveAccountCallback {
+                                        override fun onRemoved() {
+                                            callback(Result.success(Unit))
+                                        }
+
+                                        override fun onError(exception: MsalException) {
+                                            callback(Result.failure(exception))
+                                        }
+                                    }
+                                )
                             }
 
                             override fun onError(exception: MsalException) {
                                 callback(Result.failure(exception))
                             }
-                        }
-                    )
-                }
-
-                override fun onError(exception: MsalException) {
-                    callback(Result.failure(exception))
-                }
-            })
+                        })
+                    }
+                },
+                onFailure = { failure -> callback(Result.failure(failure)) }
+            )
         }
     }
 }
