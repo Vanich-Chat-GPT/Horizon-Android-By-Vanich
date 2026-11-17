@@ -122,6 +122,7 @@ class MinecraftLaunchArgumentsTest {
                 javaHome = javaHome,
                 gameDirectory = game,
                 libraries = listOf(library),
+                clientJar = File(root, "client.jar").apply { writeText("client") },
                 nativeDirectory = natives,
                 temporaryDirectory = temp,
                 mainClass = "net.minecraft.client.main.Main",
@@ -151,6 +152,7 @@ class MinecraftLaunchArgumentsTest {
                 javaHome = folder,
                 gameDirectory = folder,
                 libraries = listOf(library),
+                clientJar = File(root, "client.jar").apply { writeText("client") },
                 nativeDirectory = folder,
                 temporaryDirectory = folder,
                 mainClass = "not a class",
@@ -162,4 +164,56 @@ class MinecraftLaunchArgumentsTest {
             root.deleteRecursively()
         }
     }
+
+    @Test
+    fun parsesModernGameAndJvmArgumentsFromVersionMetadata() {
+        val metadata = """
+            {
+              "arguments": {
+                "game": [
+                  "--username",
+                  {
+                    "rules": [{"action":"allow","os":{"name":"android","arch":"aarch64"}}],
+                    "value": ["\u0024{auth_player_name}", "--width", "\u0024{resolution_width}"]
+                  },
+                  {
+                    "rules": [{"action":"allow","os":{"name":"windows"}}],
+                    "value": "--quickPlayPath"
+                  }
+                ],
+                "jvm": ["-Dfile.encoding=UTF-8"]
+              }
+            }
+        """.trimIndent()
+
+        val parsed = MinecraftVersionArgumentParser.parse(metadata)
+        assertEquals(
+            listOf("--username", "Steve", "--width", "1280"),
+            MinecraftArgumentResolver.resolve(
+                parsed.game,
+                mapOf("auth_player_name" to "Steve", "resolution_width" to "1280"),
+                androidArm64
+            )
+        )
+        assertEquals(
+            listOf("-Dfile.encoding=UTF-8"),
+            MinecraftArgumentResolver.resolve(parsed.jvm, emptyMap(), androidArm64)
+        )
+    }
+
+    @Test
+    fun parsesLegacyMinecraftArgumentStringWithoutLosingQuotedValues() {
+        val parsed = MinecraftVersionArgumentParser.parse(
+            """{"minecraftArguments":"--username \"\u0024{auth_player_name}\" --server \"play.example:25565\""}"""
+        )
+        assertEquals(
+            listOf("--username", "Player One", "--server", "play.example:25565"),
+            MinecraftArgumentResolver.resolve(
+                parsed.game,
+                mapOf("auth_player_name" to "Player One"),
+                androidArm64
+            )
+        )
+    }
+
 }

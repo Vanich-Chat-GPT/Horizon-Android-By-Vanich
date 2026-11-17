@@ -9,6 +9,8 @@ import java.util.Locale
 import javax.net.ssl.HttpsURLConnection
 import org.json.JSONArray
 import org.json.JSONObject
+import dev.nova.horizon.runtime.MinecraftVersionArgumentParser
+import dev.nova.horizon.runtime.ParsedMinecraftArguments
 
 internal data class OfficialVersion(
     val id: String,
@@ -65,7 +67,8 @@ internal data class AndroidInstallPlan(
 
 internal data class VersionInspection(
     val metadata: VersionMetadataSummary,
-    val plan: AndroidInstallPlan
+    val plan: AndroidInstallPlan,
+    val launchArguments: ParsedMinecraftArguments
 )
 
 /**
@@ -205,7 +208,7 @@ internal object VersionCatalogRepository {
             throw SecurityException("Rust Core вернул неожиданный или небезопасный план")
         }
 
-        return VersionInspection(summary, plan)
+        return VersionInspection(summary, plan, MinecraftVersionArgumentParser.parse(json))
     }
 
     private fun parseArtifact(value: JSONObject) = PlannedArtifact(

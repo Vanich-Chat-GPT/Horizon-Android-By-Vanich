@@ -102,6 +102,7 @@ internal data class MinecraftLaunchSpec(
     val javaHome: File,
     val gameDirectory: File,
     val libraries: List<File>,
+    val clientJar: File,
     val nativeDirectory: File,
     val temporaryDirectory: File,
     val mainClass: String,
@@ -112,6 +113,7 @@ internal data class MinecraftLaunchSpec(
         require(javaExecutable.isFile) { "Java executable отсутствует" }
         require(javaHome.isDirectory) { "Java home отсутствует" }
         require(gameDirectory.isDirectory) { "Каталог игры отсутствует" }
+        require(clientJar.isFile) { "Client JAR отсутствует" }
         require(nativeDirectory.isDirectory) { "Каталог native-библиотек отсутствует" }
         require(temporaryDirectory.isDirectory) { "Временный каталог отсутствует" }
         require(mainClass.matches(Regex("[A-Za-z0-9_.$]+"))) { "Некорректный mainClass" }
@@ -119,18 +121,29 @@ internal data class MinecraftLaunchSpec(
             "Не все JAR-библиотеки установлены"
         }
 
-        val classPath = libraries.joinToString(File.pathSeparator) { it.absolutePath }
+        val classPath = (libraries + clientJar).joinToString(File.pathSeparator) { it.absolutePath }
         return buildList {
             add(javaExecutable.absolutePath)
+            addAll(jvmArguments)
+            // Android runtime paths are authoritative; version metadata must not override them.
             add("-Djava.home=${javaHome.absolutePath}")
             add("-Djava.io.tmpdir=${temporaryDirectory.absolutePath}")
             add("-Djava.library.path=${nativeDirectory.absolutePath}")
             add("-Dorg.lwjgl.librarypath=${nativeDirectory.absolutePath}")
-            addAll(jvmArguments)
             add("-cp")
             add(classPath)
             add(mainClass)
             addAll(gameArguments)
         }
     }
+}
+
+
+/** Starts the configured JVM without a shell and with the game directory as cwd. */
+internal object MinecraftProcessRunner {
+    fun start(spec: MinecraftLaunchSpec): Process =
+        ProcessBuilder(spec.command())
+            .directory(spec.gameDirectory)
+            .redirectErrorStream(true)
+            .start()
 }
