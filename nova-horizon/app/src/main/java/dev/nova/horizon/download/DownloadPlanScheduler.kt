@@ -20,10 +20,6 @@ internal object DownloadPlanScheduler {
             "План уже помечен как готовый; требуется повторная проверка runtime."
         }
 
-        val assetBatch = runBlocking {
-            AssetBatchCoordinator.prepareAndEnqueue(context, plan)
-        }
-
         val artifacts = buildList {
             add(plan.client)
             addAll(plan.libraries)
@@ -42,6 +38,10 @@ internal object DownloadPlanScheduler {
                 relativePath = artifact.relativePath,
                 displayName = plan.versionId + " · " + artifact.kind
             ).also { it.validate() }
+        }
+
+        val assetBatch = runBlocking {
+            AssetBatchCoordinator.prepareAndEnqueue(context, plan)
         }
 
         var scheduled = 0
