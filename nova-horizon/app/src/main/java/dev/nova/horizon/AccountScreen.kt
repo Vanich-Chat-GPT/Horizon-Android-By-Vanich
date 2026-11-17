@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,53 @@ internal fun AccountScreen() {
 
     fun updateOnUi(action: () -> Unit) {
         if (activity != null) activity.runOnUiThread(action) else action()
+    }
+
+    LaunchedEffect(account.isSignedIn, session?.expiresAtMillis) {
+        if (account.isSignedIn &&
+            (session == null || !session.isValid()) &&
+            MicrosoftAuthManager.isConfigured()
+        ) {
+            busy = true
+            MicrosoftAuthManager.initialize(context) { initialized ->
+                initialized.fold(
+                    onSuccess = {
+                        MicrosoftAuthManager.acquireTokenSilently { tokenResult ->
+                            tokenResult.fold(
+                                onSuccess = { microsoftToken ->
+                                    scope.launch {
+                                        val result = runCatching {
+                                            MinecraftAuthExchange.authenticate(context, microsoftToken)
+                                        }
+                                        busy = false
+                                        result.onSuccess {
+                                            account = MinecraftAccountStore.read(context)
+                                            session = MinecraftSessionStore.read(context)
+                                            message = "Сеанс Microsoft обновлён"
+                                        }.onFailure {
+                                            message = it.message ?: "Не удалось обновить сеанс Minecraft"
+                                        }
+                                    }
+                                },
+                                onFailure = { failure ->
+                                    updateOnUi {
+                                        busy = false
+                                        message = "Автоматическое обновление не выполнено: " +
+                                            (failure.message ?: "нужен повторный вход")
+                                    }
+                                }
+                            )
+                        }
+                    },
+                    onFailure = { failure ->
+                        updateOnUi {
+                            busy = false
+                            message = failure.message ?: "Не удалось подготовить Microsoft OAuth"
+                        }
+                    }
+                )
+            }
+        }
     }
 
     Column(

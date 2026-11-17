@@ -3,6 +3,7 @@ package dev.nova.horizon.account
 import android.app.Activity
 import android.content.Context
 import com.microsoft.identity.client.AcquireTokenParameters
+import com.microsoft.identity.client.AcquireTokenSilentParameters
 import com.microsoft.identity.client.AuthenticationCallback
 import com.microsoft.identity.client.IAccount
 import com.microsoft.identity.client.IAuthenticationResult
@@ -109,6 +110,53 @@ internal object MicrosoftAuthManager {
             .build()
 
         current.acquireToken(parameters)
+    }
+
+    fun acquireTokenSilently(callback: (Result<String>) -> Unit) {
+        val current = application
+        if (current == null) {
+            callback(Result.failure(IllegalStateException("Microsoft OAuth не инициализирован.")))
+            return
+        }
+
+        current.getAccounts(object : IPublicClientApplication.LoadAccountsCallback {
+            override fun onTaskCompleted(accounts: List<IAccount>) {
+                val account = accounts.firstOrNull()
+                if (account == null) {
+                    callback(Result.failure(IllegalStateException("В Microsoft ещё нет подключённого аккаунта.")))
+                    return
+                }
+
+                val parameters = AcquireTokenSilentParameters.Builder()
+                    .withScopes(scopes)
+                    .forAccount(account)
+                    .fromAuthority(account.authority)
+                    .withCallback(object : AuthenticationCallback {
+                        override fun onSuccess(authenticationResult: IAuthenticationResult) {
+                            val token = authenticationResult.accessToken
+                            if (token.isBlank()) {
+                                callback(Result.failure(IllegalStateException("Microsoft не вернул access token.")))
+                            } else {
+                                callback(Result.success(token))
+                            }
+                        }
+
+                        override fun onError(exception: MsalException) {
+                            callback(Result.failure(exception))
+                        }
+
+                        override fun onCancel() {
+                            callback(Result.failure(IllegalStateException("Тихое обновление Microsoft отменено.")))
+                        }
+                    })
+                    .build()
+                current.acquireTokenSilentAsync(parameters)
+            }
+
+            override fun onError(exception: MsalException) {
+                callback(Result.failure(exception))
+            }
+        })
     }
 
     fun signOut(context: Context, callback: (Result<Unit>) -> Unit) {
