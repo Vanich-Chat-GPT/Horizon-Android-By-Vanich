@@ -6,6 +6,7 @@ on:
       - "nova-horizon/**"
     paths:
       - "nova-horizon/engine/**"
+      - "nova-horizon/ui/**"
       - ".github/workflows/nova-horizon-android.yml"
   workflow_dispatch:
 
@@ -14,7 +15,7 @@ permissions:
 
 concurrency:
   group: nova-horizon-rust-android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -73,6 +74,15 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --version 3.5.4 --locked
 
+      - name: Validate Android source, diagnostics and mobile defaults
+        working-directory: ${{ runner.temp }}/starling
+        run: |
+          set -euo pipefail
+          python3 -m py_compile "$GITHUB_WORKSPACE/nova-horizon/engine/prepare_starling.py" "$GITHUB_WORKSPACE/nova-horizon/ui/integrate_launcher.py"
+          python3 -m unittest discover -s tests -p 'test_android*.py' -v
+          python3 tools/test_android_diagnostics.py
+          cargo test -p horizon-client-render --lib graphics::tests::mobile_defaults_keep_nearby_quality_and_cap_at_90_fps
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -113,6 +123,7 @@ jobs:
           unzip -l "$APK" | grep -F 'assets/prepare-kit.zip'
           unzip -l "$APK" | grep -F 'assets/lowbudget.zip'
           unzip -l "$APK" | grep -F 'assets/StarlingVisuals.zip'
+          unzip -l "$APK" | grep -F 'assets/launcher-bg.webp'
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           mkdir -p "$GITHUB_WORKSPACE/nova-horizon/engine-output"
