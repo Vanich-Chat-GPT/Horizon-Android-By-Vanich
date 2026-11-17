@@ -68,6 +68,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.13"
+      - name: Android unit tests
+        working-directory: nova-horizon
+        run: gradle testDebugUnitTest --no-daemon
       - name: Assemble debug APK
         working-directory: nova-horizon
         run: gradle assembleDebug --no-daemon
