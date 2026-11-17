@@ -40,6 +40,15 @@ internal object DownloadPlanScheduler {
             ).also { it.validate() }
         }
 
+        val indexRequest = OfficialArtifactRequest(
+            url = plan.assetIndex.url,
+            sha1 = plan.assetIndex.sha1,
+            size = plan.assetIndex.size,
+            relativePath = plan.assetIndex.relativePath,
+            displayName = plan.versionId + " · asset index"
+        ).also { it.validate() }
+        DownloadStorageBudget.requireForArtifacts(context, requests + indexRequest)
+
         val assetBatch = runBlocking {
             AssetBatchCoordinator.prepareAndEnqueue(context, plan)
         }

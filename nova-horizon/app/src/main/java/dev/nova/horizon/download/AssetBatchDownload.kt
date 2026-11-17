@@ -309,6 +309,7 @@ internal object AssetBatchCoordinator {
         )
 
         val assetPlan = dev.nova.horizon.AssetIndexRepository.parse(downloadedIndex.file, assetIndexId)
+        DownloadStorageBudget.requireForAssets(context, assetPlan)
         val manifestPath = AssetBatchManifest.write(context, plan.versionId, assetPlan)
         val request = AssetBatchRequest(
             versionId = plan.versionId,
