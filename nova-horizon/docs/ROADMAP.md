@@ -46,6 +46,8 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 
 ## Phase 3 — Java runtime research and integration
 - [ ] Select and audit a redistributable ARM64 Java runtime
+- [x] Parse Mojang modern and legacy game/JVM argument metadata with ordered OS/feature rules
+- [x] Build a shell-free JVM argv and ProcessBuilder launch boundary (not yet connected to a JVM runtime)
 - [ ] Verify JVM lifecycle and JNI/native library loading
 - [ ] Define graphics and input bridge requirements
 - [ ] Compatibility matrix for Minecraft versions
@@ -53,7 +55,8 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 
 ## Phase 4 — game integration
 - [ ] Official game file installation validation on device
-- [ ] Version-specific launch configuration
+- [x] Version-specific argument parsing and placeholder resolution
+- [ ] Complete version-specific launch configuration (classpath, natives, authentication and runtime integration)
 - [ ] Rendering and input integration
 - [ ] Audio integration
 - [ ] World save and resume validation
