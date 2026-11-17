@@ -301,6 +301,11 @@ public final class WorkService extends Service {
         'pub const REPOSITORIES: [&str; 2] = ["starling-client/starling", "JuanLuci/starling"];',
         'pub const REPOSITORIES: [&str; 1] = ["Vanich-Chat-GPT/Horizon-Android-By-Vanich"];',
     )
+    replace_once(
+        releases,
+        'let name = format!("starling-{version}-{abi}.apk");',
+        'let name = format!("NOVA-HORIZON-{version}-{abi}.apk");',
+    )
 
     # Static joystick is the first-run default; the user can still choose Follow Finger.
     layout = root / "crates/horizon-client-render/src/android_controls/layout.rs"
