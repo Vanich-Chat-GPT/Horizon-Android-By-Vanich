@@ -633,6 +633,13 @@ pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::set
             "starling.update.button.install": "Install",
             "starling.update.button.later": "Later",
             "starling.update.button.retry": "Try again",
+            "starling.credits.founders": "NOVA HORIZON, based on Horizon Android by JuanLuci and Vasysik",
+            "starling.account.waiting_browser": "Waiting for you to finish in the browser. NOVA HORIZON checks automatically.",
+            "starling.account.setup.intro": "Sign in with Microsoft or Ely.by, or choose an offline profile. NOVA HORIZON downloads the original Mojang files and prepares them on this device (about 1.5 GB).",
+            "starling.mods.native.out_of_date": "The build with %s was made for an earlier NOVA HORIZON install, so it no longer loads. Compile it again.",
+            "starling.mods.native.now_build": "Now: NOVA HORIZON %s with %s, compiled %s.",
+            "starling.mods.native.now_apk": "Now: NOVA HORIZON %s from the APK, without native mods.",
+            "starling.mods.native.not_built_tip": "Installed, but not in this game yet: Compile builds it with the mod on the NOVA HORIZON build server.",
         },
     )
     ru_path = root / "crates/horizon-client/assets/horizon/lang/ru_ru.json"
@@ -756,6 +763,13 @@ pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::set
         "starling.update.button.install": "Установить",
         "starling.update.button.later": "Позже",
         "starling.update.button.retry": "Повторить",
+        "starling.credits.founders": "NOVA HORIZON основан на Horizon Android; авторы исходного проекта — JuanLuci и Vasysik",
+        "starling.account.waiting_browser": "Ожидаем завершения входа в браузере. NOVA HORIZON проверит результат автоматически.",
+        "starling.account.setup.intro": "Войдите через Microsoft или Ely.by либо выберите офлайн-профиль. NOVA HORIZON загрузит оригинальные файлы Mojang и подготовит их на устройстве (около 1,5 ГБ).",
+        "starling.mods.native.out_of_date": "Сборка с %s сделана для предыдущей установки NOVA HORIZON и больше не загружается. Соберите её заново.",
+        "starling.mods.native.now_build": "Сейчас: NOVA HORIZON %s с %s, сборка %s.",
+        "starling.mods.native.now_apk": "Сейчас: NOVA HORIZON %s из APK, без нативных модов.",
+        "starling.mods.native.not_built_tip": "Установлен, но ещё не используется в игре: «Собрать» создаст сборку с этим модом на сервере NOVA HORIZON.",
     })
     ru_path.write_text(json.dumps(merged_ru, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
