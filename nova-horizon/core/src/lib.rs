@@ -1,3 +1,4 @@
+pub mod asset_index;
 pub mod chunk_queue;
 pub mod download_state;
 pub mod frame_time;
@@ -148,6 +149,43 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeBuildInstallPlan
             }
         }
         Err(_) => "{\"ok\":false,\"error\":\"InvalidJavaString\"}".to_owned(),
+    };
+
+    match env.new_string(response) {
+        Ok(value) => value.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+
+/// Parse a Mojang asset index and return a SHA-1-deduplicated object plan.
+#[no_mangle]
+pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativePlanAssetIndex(
+    mut env: JNIEnv,
+    _this: JObject,
+    json: JString,
+    expected_id: JString,
+) -> jstring {
+    let response = match env.get_string(&json) {
+        Ok(payload) => {
+            let payload: String = payload.into();
+            match env.get_string(&expected_id) {
+                Ok(expected) => {
+                    let expected_id: String = expected.into();
+                    match asset_index::AssetIndexPlan::parse(&payload, &expected_id) {
+                        Ok(plan) => serde_json::to_string(&plan).unwrap_or_else(|_| {
+                            r#"{"ok":false,"error":"SerializeFailed"}"#.to_owned()
+                        }),
+                        Err(error) => serde_json::json!({
+                            "ok": false,
+                            "error": format!("{:?}", error)
+                        }).to_string(),
+                    }
+                }
+                Err(_) => r#"{"ok":false,"error":"InvalidAssetIndexId"}"#.to_owned(),
+            }
+        }
+        Err(_) => r#"{"ok":false,"error":"InvalidJavaString"}"#.to_owned(),
     };
 
     match env.new_string(response) {

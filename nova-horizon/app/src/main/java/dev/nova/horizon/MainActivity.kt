@@ -218,6 +218,7 @@ private fun VersionsScreen() {
     var inspection by remember { mutableStateOf<VersionInspection?>(null) }
     var metadataError by remember { mutableStateOf<String?>(null) }
     var downloadMessage by remember { mutableStateOf<String?>(null) }
+    var schedulingDownloads by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val account = remember(context) { MinecraftAccountStore.read(context) }
 
@@ -326,27 +327,34 @@ private fun VersionsScreen() {
                     StatusLine("Нерешённых требований", plan.issues.size.toString())
                     StatusLine("Можно запускать", if (plan.launchReady) "Да" else "Нет — runtime ещё не подключён")
                     Text(
-                        "План содержит client JAR, asset index и разрешённые общие JAR-библиотеки. Отдельные asset-объекты и Android native bridge ещё не готовы.",
+                        "План включает client JAR, общие JAR-библиотеки и пакет ресурсов из официального asset index. Игровой запуск пока недоступен: Android Java runtime и графический мост ещё не подключены.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                     Button(
-                        enabled = account.hasJavaEntitlement,
+                        enabled = account.hasJavaEntitlement && !schedulingDownloads,
                         onClick = {
-                            val result = runCatching {
-                                DownloadPlanScheduler.enqueue(context, plan)
+                            schedulingDownloads = true
+                            downloadMessage = "Проверка asset index и подготовка пакетной загрузки…"
+                            worker.execute {
+                                val outcome = runCatching {
+                                    DownloadPlanScheduler.enqueue(context, plan)
+                                }
+                                Handler(Looper.getMainLooper()).post {
+                                    schedulingDownloads = false
+                                    downloadMessage = outcome.fold(
+                                        onSuccess = {
+                                            "Подготовлено файлов: " + it.totalArtifacts +
+                                                " · общий размер: " + formatBytes(it.totalBytes)
+                                        },
+                                        onFailure = { it.message ?: "Не удалось подготовить загрузку" }
+                                    )
+                                }
                             }
-                            downloadMessage = result.fold(
-                                onSuccess = {
-                                    "В очередь добавлено файлов: " + it.totalArtifacts +
-                                        " · общий размер: " + formatBytes(it.totalBytes)
-                                },
-                                onFailure = { it.message ?: "Не удалось поставить файлы в очередь" }
-                            )
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Скачать подготовительные файлы")
+                        Text(if (schedulingDownloads) "Подготовка загрузки…" else "Скачать игру и ресурсы")
                     }
                     if (!account.hasJavaEntitlement) {
                         Text(

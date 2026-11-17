@@ -39,7 +39,8 @@ internal data class OfficialArtifactRequest(
             "piston-meta.mojang.com",
             "launcher.mojang.com",
             "libraries.minecraft.net",
-            "repo.maven.apache.org"
+            "repo.maven.apache.org",
+            "resources.download.minecraft.net"
         )
         val host = uri.host?.lowercase(Locale.ROOT) ?: ""
         require(uri.scheme.equals("https", ignoreCase = true) &&

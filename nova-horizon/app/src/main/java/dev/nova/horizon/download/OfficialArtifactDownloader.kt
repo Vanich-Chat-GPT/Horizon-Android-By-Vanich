@@ -34,7 +34,8 @@ internal object OfficialArtifactDownloader {
         "piston-meta.mojang.com",
         "launcher.mojang.com",
         "libraries.minecraft.net",
-        "repo.maven.apache.org"
+        "repo.maven.apache.org",
+        "resources.download.minecraft.net"
     )
 
     suspend fun download(

@@ -80,6 +80,59 @@ internal object DownloadProgressStore {
     }
 
     @Synchronized
+    fun enqueueAggregate(
+        context: Context,
+        path: String,
+        displayName: String,
+        totalBytes: Long,
+        handle: String
+    ) {
+        require(path.isNotBlank() && !path.startsWith('/') && !path.contains('\\'))
+        val old = read(context, path)
+        write(
+            context,
+            DownloadProgressEntry(
+                path = path,
+                displayName = displayName,
+                state = "QUEUED",
+                downloadedBytes = old?.downloadedBytes?.coerceAtMost(totalBytes) ?: 0L,
+                totalBytes = totalBytes.coerceAtLeast(0L),
+                bytesPerSecond = 0L,
+                handle = handle,
+                error = "",
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    @Synchronized
+    fun updateAggregate(
+        context: Context,
+        path: String,
+        displayName: String,
+        state: String,
+        downloadedBytes: Long,
+        totalBytes: Long,
+        bytesPerSecond: Long = 0L,
+        error: String = ""
+    ) {
+        write(
+            context,
+            DownloadProgressEntry(
+                path = path,
+                displayName = displayName,
+                state = state,
+                downloadedBytes = downloadedBytes.coerceIn(0L, totalBytes.coerceAtLeast(0L)),
+                totalBytes = totalBytes.coerceAtLeast(0L),
+                bytesPerSecond = bytesPerSecond.coerceAtLeast(0L),
+                handle = read(context, path)?.handle.orEmpty(),
+                error = error.take(512),
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    @Synchronized
     fun findByHandle(context: Context, handle: String): DownloadProgressEntry? =
         all(context).firstOrNull { it.handle == handle }
 

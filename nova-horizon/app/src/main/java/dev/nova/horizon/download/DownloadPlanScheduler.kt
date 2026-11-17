@@ -2,6 +2,7 @@ package dev.nova.horizon.download
 
 import android.content.Context
 import dev.nova.horizon.account.MinecraftAccountStore
+import kotlinx.coroutines.runBlocking
 
 internal data class DownloadPlanScheduleResult(
     val totalArtifacts: Int,
@@ -19,9 +20,12 @@ internal object DownloadPlanScheduler {
             "План уже помечен как готовый; требуется повторная проверка runtime."
         }
 
+        val assetBatch = runBlocking {
+            AssetBatchCoordinator.prepareAndEnqueue(context, plan)
+        }
+
         val artifacts = buildList {
             add(plan.client)
-            add(plan.assetIndex)
             addAll(plan.libraries)
         }.distinctBy { it.relativePath }
 
@@ -46,12 +50,12 @@ internal object DownloadPlanScheduler {
             scheduled += 1
         }
 
-        val totalBytes = artifacts.fold(0L) { total, artifact ->
+        val totalBytes = artifacts.fold(plan.assetIndex.size) { total, artifact ->
             total.saturatingAdd(artifact.size)
-        }
+        }.saturatingAdd(assetBatch.totalBytes)
         return DownloadPlanScheduleResult(
-            totalArtifacts = artifacts.size,
-            newOrReusedTasks = scheduled,
+            totalArtifacts = artifacts.size + 1 + assetBatch.assetObjects,
+            newOrReusedTasks = scheduled + 1,
             totalBytes = totalBytes
         )
     }

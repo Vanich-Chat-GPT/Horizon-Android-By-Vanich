@@ -9,6 +9,7 @@ object NativeBridge {
     private external fun nativeParseVersionCatalog(json: String): String
     private external fun nativeInspectVersionMetadata(json: String, expectedId: String): String
     private external fun nativeBuildInstallPlan(json: String, expectedId: String): String
+    private external fun nativePlanAssetIndex(json: String, expectedId: String): String
 
     fun status(): String {
         val failure = loadFailure
@@ -30,6 +31,11 @@ object NativeBridge {
     fun buildInstallPlan(json: String, expectedId: String): String {
         ensureLoaded()
         return nativeBuildInstallPlan(json, expectedId)
+    }
+
+    fun planAssetIndex(json: String, expectedId: String): String {
+        ensureLoaded()
+        return nativePlanAssetIndex(json, expectedId)
     }
 
     private fun ensureLoaded() {
