@@ -25,6 +25,15 @@ def main() -> None:
     java_dir = android / "java/io/github/juanluci/starling"
     activity = java_dir / "LauncherActivity.java"
 
+    # The pinned upstream provider still writes GameFolder.context, but GameFolder has no
+    # such field in this revision. Context is already obtained from DocumentsProvider.getContext().
+    provider = java_dir / "GameFolderProvider.java"
+    replace_once(
+        provider,
+        "        GameFolder.context = context;\\n",
+        "",
+    )
+
     # Add the NOVA home screen source; build_apk.py compiles every Java source in this directory.
     home_source = Path(__file__).with_name("LauncherHome.java")
     if not home_source.is_file():
