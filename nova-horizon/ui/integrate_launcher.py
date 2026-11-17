@@ -349,6 +349,71 @@ public final class WorkService extends Service {
     }"""
     replace_once(releases, old_update_test, new_update_test)
 
+    update_offer = root / "crates/horizon-client/src/game/update_offer.rs"
+    old_offer = """        let (title, body, buttons): (String, String, &[&str]) = match &stage {
+            Stage::Ask => (
+                format!("Starling {version} is out"),
+                format!(
+                    "Update now? Starling downloads it ({} MB) and Android installs it over this \\
+                     one: your worlds and settings stay.",
+                    mb(release.size)
+                ),
+                &["Update", "Tomorrow", "No"],
+            ),
+            Stage::Downloading => (
+                format!("Downloading Starling {version}"),
+                format!("{} of {} MB", mb(done), mb(total)),
+                &["Cancel"],
+            ),
+            Stage::Installing => (
+                format!("Install Starling {version}"),
+                "Android asks to install the update (the first time, to allow installs from \\
+                 Starling). Once it is in, open Starling again."
+                    .into(),
+                &["Install", "Later"],
+            ),
+            Stage::Failed(e) => (
+                "The update did not download".into(),
+                e.clone(),
+                &["Try again", "Later"],
+            ),
+        };"""
+    new_offer = """        let (title, body, buttons): (String, String, Vec<String>) = match &stage {
+            Stage::Ask => (
+                crate::lang::get("starling.update.ask.title").replace("{version}", version),
+                crate::lang::get("starling.update.ask.body").replace("{size}", &mb(release.size)),
+                vec![
+                    crate::lang::get("starling.update.button.update"),
+                    crate::lang::get("starling.update.button.tomorrow"),
+                    crate::lang::get("starling.update.button.no"),
+                ],
+            ),
+            Stage::Downloading => (
+                crate::lang::get("starling.update.download.title").replace("{version}", version),
+                crate::lang::get("starling.update.download.body")
+                    .replace("{done}", &mb(done))
+                    .replace("{total}", &mb(total)),
+                vec![crate::lang::get("starling.update.button.cancel")],
+            ),
+            Stage::Installing => (
+                crate::lang::get("starling.update.install.title").replace("{version}", version),
+                crate::lang::get("starling.update.install.body"),
+                vec![
+                    crate::lang::get("starling.update.button.install"),
+                    crate::lang::get("starling.update.button.later"),
+                ],
+            ),
+            Stage::Failed(e) => (
+                crate::lang::get("starling.update.failed.title"),
+                e.clone(),
+                vec![
+                    crate::lang::get("starling.update.button.retry"),
+                    crate::lang::get("starling.update.button.later"),
+                ],
+            ),
+        };"""
+    replace_once(update_offer, old_offer, new_offer)
+
     # Static joystick is the first-run default; the user can still choose Follow Finger.
     layout = root / "crates/horizon-client-render/src/android_controls/layout.rs"
     replace_once(
@@ -554,6 +619,20 @@ pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::set
             "starling.controls.joystick_floating": "Floating joystick",
             "starling.controls.joystick_mid_bottom_left": "Mid-bottom left",
             "starling.controls.joystick_right_side": "Right side",
+            "starling.update.ask.title": "NOVA HORIZON {version} is available",
+            "starling.update.ask.body": "Update now? NOVA HORIZON will download it ({size} MB), then Android installs it over this version. Your worlds and settings stay.",
+            "starling.update.download.title": "Downloading NOVA HORIZON {version}",
+            "starling.update.download.body": "{done} of {total} MB",
+            "starling.update.install.title": "Install NOVA HORIZON {version}",
+            "starling.update.install.body": "Android will ask to install the update. The first time, allow installs from NOVA HORIZON. Open NOVA HORIZON again when it finishes.",
+            "starling.update.failed.title": "The update did not download",
+            "starling.update.button.update": "Update",
+            "starling.update.button.tomorrow": "Tomorrow",
+            "starling.update.button.no": "No",
+            "starling.update.button.cancel": "Cancel",
+            "starling.update.button.install": "Install",
+            "starling.update.button.later": "Later",
+            "starling.update.button.retry": "Try again",
         },
     )
     ru_path = root / "crates/horizon-client/assets/horizon/lang/ru_ru.json"
@@ -663,6 +742,20 @@ pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::set
         "starling.controls.joystick_floating": "Плавающий джойстик",
         "starling.controls.joystick_mid_bottom_left": "Слева внизу",
         "starling.controls.joystick_right_side": "Правая сторона",
+        "starling.update.ask.title": "Доступна NOVA HORIZON {version}",
+        "starling.update.ask.body": "Обновить сейчас? NOVA HORIZON загрузит файл ({size} МБ), затем Android установит его поверх текущей версии. Миры и настройки сохранятся.",
+        "starling.update.download.title": "Загрузка NOVA HORIZON {version}",
+        "starling.update.download.body": "{done} из {total} МБ",
+        "starling.update.install.title": "Установить NOVA HORIZON {version}",
+        "starling.update.install.body": "Android запросит установку обновления. При первом обновлении разрешите установку приложений из NOVA HORIZON. После завершения снова откройте лаунчер.",
+        "starling.update.failed.title": "Не удалось загрузить обновление",
+        "starling.update.button.update": "Обновить",
+        "starling.update.button.tomorrow": "Завтра",
+        "starling.update.button.no": "Нет",
+        "starling.update.button.cancel": "Отмена",
+        "starling.update.button.install": "Установить",
+        "starling.update.button.later": "Позже",
+        "starling.update.button.retry": "Повторить",
     })
     ru_path.write_text(json.dumps(merged_ru, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
