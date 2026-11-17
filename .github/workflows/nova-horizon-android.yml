@@ -127,8 +127,8 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           mkdir -p "$GITHUB_WORKSPACE/nova-horizon/engine-output"
-          cp "$APK" "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk"
-          sha256sum "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk" | tee "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk.sha256"
+          cp "$APK" "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-3.0.0-arm64-v8a.apk"
+          sha256sum "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-3.0.0-arm64-v8a.apk" | tee "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-3.0.0-arm64-v8a.apk.sha256"
           printf 'NOVA HORIZON 3.0.0\nEngine commit: %s\nBuild profile: fast\nABI: arm64-v8a\n' "$HORIZON_ANDROID_COMMIT" > "$GITHUB_WORKSPACE/nova-horizon/engine-output/build-info.txt"
 
       - name: Upload installable APK
@@ -136,8 +136,8 @@ jobs:
         with:
           name: nova-horizon-26.3-arm64
           path: |
-            nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk
-            nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk.sha256
+            nova-horizon/engine-output/NOVA-HORIZON-3.0.0-arm64-v8a.apk
+            nova-horizon/engine-output/NOVA-HORIZON-3.0.0-arm64-v8a.apk.sha256
             nova-horizon/engine-output/build-info.txt
           if-no-files-found: error
           retention-days: 30
