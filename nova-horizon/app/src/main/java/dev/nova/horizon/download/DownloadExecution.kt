@@ -11,7 +11,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.ServiceInfo
+import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
@@ -109,15 +109,21 @@ internal class OfficialArtifactDownloadWorker(
         }
     }
 
-    private fun foreground(id: Int, title: String, downloaded: Long, total: Long, speed: Long): ForegroundInfo {
-        val cancelIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(id)
+    private fun foreground(
+        notificationId: Int,
+        title: String,
+        downloaded: Long,
+        total: Long,
+        speed: Long
+    ): ForegroundInfo {
+        val cancelIntent = WorkManager.getInstance(applicationContext).createCancelPendingIntent(this.id)
         val notification = DownloadNotifications.build(
             applicationContext, title, downloaded, total, speed, cancelIntent
         )
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ForegroundInfo(id, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         } else {
-            ForegroundInfo(id, notification)
+            ForegroundInfo(notificationId, notification)
         }
     }
 }
