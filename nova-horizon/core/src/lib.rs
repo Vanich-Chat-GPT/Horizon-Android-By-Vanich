@@ -157,7 +157,6 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeBuildInstallPlan
     }
 }
 
-
 /// Parse a Mojang asset index and return a SHA-1-deduplicated object plan.
 #[no_mangle]
 pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativePlanAssetIndex(
