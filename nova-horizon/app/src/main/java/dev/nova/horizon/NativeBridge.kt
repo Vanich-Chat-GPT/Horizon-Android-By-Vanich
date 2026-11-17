@@ -8,6 +8,7 @@ object NativeBridge {
     external fun nativeCoreStatus(): String
     private external fun nativeParseVersionCatalog(json: String): String
     private external fun nativeInspectVersionMetadata(json: String, expectedId: String): String
+    private external fun nativeBuildInstallPlan(json: String, expectedId: String): String
 
     fun status(): String {
         val failure = loadFailure
@@ -24,6 +25,11 @@ object NativeBridge {
     fun inspectVersionMetadata(json: String, expectedId: String): String {
         ensureLoaded()
         return nativeInspectVersionMetadata(json, expectedId)
+    }
+
+    fun buildInstallPlan(json: String, expectedId: String): String {
+        ensureLoaded()
+        return nativeBuildInstallPlan(json, expectedId)
     }
 
     private fun ensureLoaded() {

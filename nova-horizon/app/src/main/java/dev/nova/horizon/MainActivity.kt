@@ -209,7 +209,7 @@ private fun VersionsScreen() {
     var catalogError by remember { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     var inspectingId by remember { mutableStateOf<String?>(null) }
-    var metadata by remember { mutableStateOf<VersionMetadataSummary?>(null) }
+    var inspection by remember { mutableStateOf<VersionInspection?>(null) }
     var metadataError by remember { mutableStateOf<String?>(null) }
 
     val worker = remember {
@@ -243,7 +243,7 @@ private fun VersionsScreen() {
             onClick = {
                 loadingCatalog = true
                 catalogError = null
-                metadata = null
+                inspection = null
                 metadataError = null
                 worker.execute {
                     val outcome = runCatching { VersionCatalogRepository.fetch() }
@@ -294,25 +294,40 @@ private fun VersionsScreen() {
             modifier = Modifier.fillMaxWidth()
         )
 
-        metadata?.let { info ->
+        inspection?.let { checked ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text("Метаданные проверены: " + info.id, fontWeight = FontWeight.Bold)
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val info = checked.metadata
+                    val plan = checked.plan
+                    Text("Метаданные и план проверены: " + info.id, fontWeight = FontWeight.Bold)
                     StatusLine("Тип", info.type)
                     StatusLine("Java", info.javaMajor?.toString() ?: "Не указан")
                     StatusLine("Главный класс", info.mainClass)
                     StatusLine("Asset index", info.assetIndexId ?: "Не указан")
                     StatusLine("Размер client JAR", info.clientSize?.let(::formatBytes) ?: "Не указан")
-                    StatusLine("Библиотек", info.libraryCount.toString())
+                    StatusLine("Библиотек в метаданных", info.libraryCount.toString())
+                    Text("План установки Android ARM64", fontWeight = FontWeight.Bold)
+                    StatusLine("Артефактов", plan.artifactCount.toString())
+                    StatusLine("JAR-библиотек", plan.libraries.size.toString())
+                    StatusLine("Размер известных файлов", formatBytes(plan.totalDownloadBytes))
+                    StatusLine("Нерешённых требований", plan.issues.size.toString())
+                    StatusLine("Можно запускать", if (plan.launchReady) "Да" else "Нет — runtime ещё не подключён")
                     Text(
-                        "Проверен SHA-1 JSON-файла. Сами JAR и библиотеки ещё не загружались.",
+                        "План содержит client JAR, asset index и разрешённые общие JAR-библиотеки. Отдельные asset-объекты и Android native bridge ещё не готовы.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
+                    plan.issues.take(8).forEach { issue ->
+                        Text(
+                            "• " + issue.library + ": " + issue.reason,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
         }
@@ -348,7 +363,7 @@ private fun VersionsScreen() {
                             enabled = inspectingId == null && !loadingCatalog,
                             onClick = {
                                 inspectingId = version.id
-                                metadata = null
+                                inspection = null
                                 metadataError = null
                                 worker.execute {
                                     val outcome = runCatching {
@@ -356,7 +371,7 @@ private fun VersionsScreen() {
                                     }
                                     Handler(Looper.getMainLooper()).post {
                                         inspectingId = null
-                                        outcome.onSuccess { metadata = it }
+                                        outcome.onSuccess { inspection = it }
                                             .onFailure {
                                                 metadataError = it.message
                                                     ?: "Не удалось проверить метаданные версии"
@@ -367,7 +382,7 @@ private fun VersionsScreen() {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                if (inspectingId == version.id) "Проверка…" else "Проверить метаданные"
+                                if (inspectingId == version.id) "Проверка…" else "Проверить план установки"
                             )
                         }
                     }

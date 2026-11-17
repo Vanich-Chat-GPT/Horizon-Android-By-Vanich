@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.Locale
 import javax.net.ssl.HttpsURLConnection
+import org.json.JSONArray
 import org.json.JSONObject
 
 internal data class OfficialVersion(
@@ -34,6 +35,37 @@ internal data class VersionMetadataSummary(
     val assetIndexId: String?,
     val clientSize: Long?,
     val libraryCount: Int
+)
+
+internal data class PlannedArtifact(
+    val kind: String,
+    val url: String,
+    val sha1: String,
+    val size: Long,
+    val relativePath: String
+)
+
+internal data class InstallPlanIssue(
+    val library: String,
+    val reason: String
+)
+
+internal data class AndroidInstallPlan(
+    val versionId: String,
+    val javaMajorVersion: Int?,
+    val client: PlannedArtifact,
+    val assetIndex: PlannedArtifact,
+    val libraries: List<PlannedArtifact>,
+    val issues: List<InstallPlanIssue>,
+    val totalDownloadBytes: Long,
+    val launchReady: Boolean
+) {
+    val artifactCount: Int get() = 2 + libraries.size
+}
+
+internal data class VersionInspection(
+    val metadata: VersionMetadataSummary,
+    val plan: AndroidInstallPlan
 )
 
 /**
@@ -102,21 +134,17 @@ internal object VersionCatalogRepository {
     }
 
     /**
-     * Downloads and checks only the selected version descriptor, not the game JARs.
-     * The expected SHA-1 comes from the validated official version index.
+     * Fetches the selected descriptor, verifies the manifest SHA-1, then asks Rust Core
+     * to validate its schema and construct a conservative Android ARM64 install plan.
      */
-    fun inspectVersion(version: OfficialVersion): VersionMetadataSummary {
+    fun inspectVersion(version: OfficialVersion): VersionInspection {
         val bytes = downloadOfficial(
             version.metadataUrl,
             maxBytes = MAX_VERSION_METADATA_BYTES,
             expectedSha1 = version.sha1
         )
-        val native = JSONObject(
-            NativeBridge.inspectVersionMetadata(
-                String(bytes, StandardCharsets.UTF_8),
-                version.id
-            )
-        )
+        val json = String(bytes, StandardCharsets.UTF_8)
+        val native = JSONObject(NativeBridge.inspectVersionMetadata(json, version.id))
         if (!native.optBoolean("ok", false)) {
             throw SecurityException(
                 "Метаданные версии " + version.id + " отклонены: " +
@@ -124,7 +152,7 @@ internal object VersionCatalogRepository {
             )
         }
 
-        return VersionMetadataSummary(
+        val summary = VersionMetadataSummary(
             id = native.getString("id"),
             type = native.getString("versionType"),
             mainClass = native.getString("mainClass"),
@@ -133,7 +161,60 @@ internal object VersionCatalogRepository {
             clientSize = if (native.isNull("clientSize")) null else native.optLong("clientSize"),
             libraryCount = native.optInt("libraryCount")
         )
+
+        val planJson = JSONObject(NativeBridge.buildInstallPlan(json, version.id))
+        if (!planJson.optBoolean("versionId") && !planJson.has("versionId")) {
+            throw SecurityException("Rust Core не вернул план установки версии")
+        }
+        if (planJson.has("ok") && !planJson.optBoolean("ok")) {
+            throw SecurityException("План установки отклонён: " + planJson.optString("error"))
+        }
+
+        val librariesJson = planJson.getJSONArray("libraries")
+        val libraries = ArrayList<PlannedArtifact>(librariesJson.length())
+        for (index in 0 until librariesJson.length()) {
+            libraries += parseArtifact(librariesJson.getJSONObject(index))
+        }
+
+        val issuesJson = planJson.getJSONArray("issues")
+        val issues = ArrayList<InstallPlanIssue>(issuesJson.length())
+        for (index in 0 until issuesJson.length()) {
+            val issue = issuesJson.getJSONObject(index)
+            issues += InstallPlanIssue(
+                library = issue.getString("library"),
+                reason = issue.getString("reason")
+            )
+        }
+
+        val plan = AndroidInstallPlan(
+            versionId = planJson.getString("versionId"),
+            javaMajorVersion = if (planJson.isNull("javaMajorVersion")) {
+                null
+            } else {
+                planJson.optInt("javaMajorVersion")
+            },
+            client = parseArtifact(planJson.getJSONObject("client")),
+            assetIndex = parseArtifact(planJson.getJSONObject("assetIndex")),
+            libraries = libraries,
+            issues = issues,
+            totalDownloadBytes = planJson.getLong("totalDownloadBytes"),
+            launchReady = planJson.getBoolean("launchReady")
+        )
+
+        if (plan.versionId != version.id || plan.launchReady) {
+            throw SecurityException("Rust Core вернул неожиданный или небезопасный план")
+        }
+
+        return VersionInspection(summary, plan)
     }
+
+    private fun parseArtifact(value: JSONObject) = PlannedArtifact(
+        kind = value.getString("kind"),
+        url = value.getString("url"),
+        sha1 = value.getString("sha1"),
+        size = value.getLong("size"),
+        relativePath = value.getString("relativePath")
+    )
 
     private fun downloadOfficial(
         address: String,
