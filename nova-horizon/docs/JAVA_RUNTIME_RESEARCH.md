@@ -17,6 +17,14 @@ https://openjdk-mobile.github.io/android/
 
 Community builds of OpenJDK for Android/Bionic exist, but a published ARM64 executable or libjvm is not evidence of compatibility with Minecraft, LWJGL, Android's sandbox, the device's API level, or Mali. Such builds are investigation leads only. They must not be downloaded into the APK or treated as a supported runtime without source review, license review, reproducible build evidence, ABI/dependency inspection and device tests.
 
+## Candidates reviewed and rejected
+
+- `itsaky/openjdk-17-android` publishes an ARM64 Android JRE, but its latest release is dated January 2022. That is too old to accept as a current runtime without a fresh reproducible build, security review, API-level checks and physical-device testing.
+- `FongMi/bdj-runtime` publishes an ARM64 OpenJDK 8 Zero runtime candidate. Its own validation says testing was on an Android API 34 x86 emulator using ARM translation, not a physical ARM64 device. Its source notice also identifies an Android compatibility patch collection based on PojavLauncher adaptations. That directly conflicts with NOVA's no-launcher-code-reuse rule, so none of its source, patches or binaries will be imported.
+- Other Android OpenJDK builds derived from PojavLauncher adaptations are excluded for the same reason, regardless of whether their binary could start.
+
+These candidates are research findings only. No runtime archive or launcher implementation was copied into NOVA.
+
 ## Required runtime acceptance gates
 
 1. Pin the exact OpenJDK source revision, patches, boot JDK, NDK, build tools and every external source archive by SHA-256.
