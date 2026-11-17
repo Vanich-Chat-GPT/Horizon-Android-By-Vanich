@@ -236,9 +236,10 @@ internal object OfficialArtifactDownloader {
 
     private fun validateUrl(url: URL) {
         val uri = URI(url.toString())
+        val host = uri.host?.lowercase(Locale.ROOT) ?: ""
         if (!uri.scheme.equals("https", ignoreCase = true) ||
-            uri.host?.lowercase(Locale.ROOT) !in allowedHosts ||
-            uri.userInfo != null || uri.rawFragment != null ||
+            host !in allowedHosts ||
+            uri.userInfo != null || uri.rawFragment != null || uri.rawQuery != null ||
             (uri.port != -1 && uri.port != 443)
         ) {
             throw SecurityException("Заблокирован недоверенный URL загрузки")

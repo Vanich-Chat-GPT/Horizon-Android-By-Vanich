@@ -30,7 +30,7 @@ internal data class OfficialArtifactRequest(
         }
         require(relativePath.isNotBlank() && !relativePath.startsWith('/') &&
             !relativePath.contains('\\') && relativePath.split('/').all {
-                it.isNotEmpty() && it != "." && it != ".." && it.none(Char::isISOControl)
+                it.isNotEmpty() && it != "." && it != ".." && it.none { character -> Character.isISOControl(character) }
             }) { "Небезопасный относительный путь" }
 
         val uri = URI(url)
@@ -41,9 +41,10 @@ internal data class OfficialArtifactRequest(
             "libraries.minecraft.net",
             "repo.maven.apache.org"
         )
+        val host = uri.host?.lowercase(Locale.ROOT) ?: ""
         require(uri.scheme.equals("https", ignoreCase = true) &&
-            uri.host?.lowercase(Locale.ROOT) in allowedHosts &&
-            uri.userInfo == null && uri.rawFragment == null &&
+            host in allowedHosts &&
+            uri.userInfo == null && uri.rawFragment == null && uri.rawQuery == null &&
             (uri.port == -1 || uri.port == 443)
         ) { "Источник файла не входит в список разрешённых HTTPS-хостов" }
     }
@@ -151,7 +152,7 @@ internal object DownloadCoordinator {
         )
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
             .setUserInitiated(true)
-            .setEstimatedNetworkBytes(0L, request.size)
+            .setEstimatedNetworkBytes(request.size, 0L)
             .setExtras(request.toPersistableBundle())
             .build()
 

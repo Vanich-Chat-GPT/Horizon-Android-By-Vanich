@@ -10,6 +10,8 @@ This file is the initial dependency register for the independent NOVA HORIZON su
 | Kotlin | Android application language/runtime | Apache-2.0 |
 | AndroidX Activity Compose | Activity integration | Apache-2.0 |
 | Jetpack Compose UI / Material 3 | Android UI | Apache-2.0 |
+| AndroidX WorkManager 2.12.0 (work-runtime-ktx) | Background transfer fallback on API 26–33 | Apache-2.0 |
+| AndroidX Core (NotificationCompat) | Progress notifications | Apache-2.0 |
 | Android SDK / NDK | Android build and native toolchain | See official Android SDK/NDK license terms |
 | Gradle / Android Gradle Plugin | Build system | Apache-2.0 |
 

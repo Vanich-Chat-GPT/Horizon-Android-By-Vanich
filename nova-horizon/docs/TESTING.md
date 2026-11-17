@@ -8,6 +8,7 @@
 - Download state machine tests for legal transitions, byte-count monotonicity, retry offsets and verification
 - Android ARM64 debug build through GitHub Actions
 - APK package/ABI inspection after successful build
+- The first version-catalog UI build passed the hosted ARM64 APK job; device installation is not yet verified
 
 ## Official catalog validation
 - The Android client fetches only the official Mojang public version index over HTTPS.
@@ -22,7 +23,8 @@
 - Network retries preserve the last recorded byte offset; integrity retries reset it.
 - A transfer cannot enter verification while a known content length remains incomplete.
 - Only verified tasks can become Complete.
-- The Android worker must separately validate HTTP Range/ETag semantics, file staging, fsync/atomic promotion and trusted hashes before this state model is connected to actual downloads.
+- The Android downloader implements HTTP Range/If-Range guarded by a strong ETag, strict Content-Range and Content-Length checks, private partial-file staging, SHA-1 verification, fsync and atomic promotion.
+- These downloader paths have not yet been exercised by a controlled-server test suite or on a physical Android device; do not treat source implementation as verified runtime behaviour.
 
 ## Physical-device matrix
 Record device model, Android build, ABI, SoC, GPU/driver, available RAM, battery state and ambient/thermal state.

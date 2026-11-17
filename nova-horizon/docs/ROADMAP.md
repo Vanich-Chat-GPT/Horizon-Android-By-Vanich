@@ -14,7 +14,7 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [x] Real EGL/OpenGL ES context probe
 - [x] Android ABI, CPU, memory and thermal diagnostics
 - [x] ARM64 debug CI build definition
-- [ ] First successful end-to-end Android ARM64 APK CI run
+- [x] First successful end-to-end Android ARM64 APK CI run (GitHub-hosted runner; not physical device)
 
 ## Phase 1 — device and graphics capability inventory
 - [x] CPU ABI and logical core inventory
@@ -29,9 +29,14 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [x] Public official version index retrieval and native validation
 - [x] Full official version list, search and selection in Android UI
 - [x] Per-version metadata retrieval with official-index SHA-1 verification and Rust schema validation
-- [x] Download state model (not yet a network/file downloader)
-- [ ] Download manifest model and SHA-1/SHA-256 verification
-- [ ] Resumable downloads, cancellation and safe staging
+- [x] Download state model with retry/verification transitions
+- [x] Single-artifact downloader with trusted HTTPS hosts, size and SHA-1 validation
+- [x] Resumable HTTP Range transfers guarded by strong ETag / If-Range
+- [x] Private staging, fsync and atomic file promotion
+- [x] Android 14+ user-initiated transfer job and older Android WorkManager fallback
+- [ ] Installer plan for client JAR, libraries, asset index and asset objects
+- [ ] End-to-end downloader tests against controlled HTTP range/ETag server
+- [ ] Connect validated version metadata to user-facing download controls
 - [ ] Microsoft OAuth authorization-code flow with PKCE
 - [ ] Keystore-backed token storage
 - [ ] Offline launcher state machine
