@@ -144,7 +144,7 @@ final class LauncherHome {
         LinearLayout.LayoutParams shareParams = new LinearLayout.LayoutParams(-2, dp(activity, 38));
         shareParams.leftMargin = dp(activity, 8);
         footer.addView(share, shareParams);
-        TextView status = text(activity, "●  Готово к запуску  ·  скорость загрузки — в уведомлении Android",
+        TextView status = text(activity, "●  Первый запуск подготовит файлы  ·  скорость загрузки — в уведомлении Android",
                 10, MUTED, false);
         status.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         footer.addView(status, new LinearLayout.LayoutParams(0, -1, 1f));
