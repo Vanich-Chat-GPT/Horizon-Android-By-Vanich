@@ -1,4 +1,4 @@
-name: NOVA HORIZON — Horizon Rust 26.3 Android
+name: NOVA HORIZON — Rust 26.3 Android ARM64
 
 on:
   push:
@@ -18,83 +18,107 @@ concurrency:
 
 jobs:
   build:
-    name: Build the real Horizon Rust game for Android ARM64
+    name: Build optimized NOVA HORIZON APK
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    timeout-minutes: 150
     env:
-      HORIZON_ANDROID_COMMIT: 1788803beebf105abe58de72752d08a5f0e0ee76
-      ANDROID_NDK_VERSION: 27.2.12479018
-      HORIZON_ANDROID_PROFILE: android
-      HORIZON_ANDROID_JOBS: 4
+      HORIZON_ANDROID_COMMIT: 50e0ef409738310524e18f77aa8ee6c4378987ed
+      ANDROID_NDK_VERSION: 28.2.13676358
+      CARGO_BUILD_JOBS: 3
+      CARGO_INCREMENTAL: 0
     steps:
       - name: Checkout NOVA HORIZON integration
         uses: actions/checkout@v4
 
-      - name: Fetch pinned Horizon Android source
+      - name: Fetch pinned Horizon Android engine
         run: |
           set -euo pipefail
-          git init "$RUNNER_TEMP/horizon-android"
-          git -C "$RUNNER_TEMP/horizon-android" remote add origin https://github.com/MocLG/horizon-android.git
-          git -C "$RUNNER_TEMP/horizon-android" fetch --depth 1 origin "$HORIZON_ANDROID_COMMIT"
-          git -C "$RUNNER_TEMP/horizon-android" checkout --detach FETCH_HEAD
-          test "$(git -C "$RUNNER_TEMP/horizon-android" rev-parse HEAD)" = "$HORIZON_ANDROID_COMMIT"
+          git init "$RUNNER_TEMP/starling"
+          git -C "$RUNNER_TEMP/starling" remote add origin https://github.com/scpao5/starling.git
+          git -C "$RUNNER_TEMP/starling" fetch --depth 1 origin "$HORIZON_ANDROID_COMMIT"
+          git -C "$RUNNER_TEMP/starling" checkout --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/starling" rev-parse HEAD)" = "$HORIZON_ANDROID_COMMIT"
 
-      - name: Apply NOVA HORIZON branding and update endpoint
-        run: python3 nova-horizon/engine/prepare_horizon_android.py "$RUNNER_TEMP/horizon-android"
+      - name: Apply NOVA HORIZON identity and JNI package
+        run: python3 nova-horizon/engine/prepare_starling.py "$RUNNER_TEMP/starling"
 
-      - name: Set up Java
+      - name: Set up Python and JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
 
-      - name: Set up Rust for Android ARM64
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Android SDK, NDK and Linux build dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes build-essential cmake clang lld pkg-config libasound2-dev libudev-dev zip unzip curl
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "build-tools;35.0.0" \
+            "platforms;android-36" \
+            "ndk;${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
+
+      - name: Install Rust ARM64 target and cargo-ndk
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version 3.5.4 --locked
 
-      - name: Install Android SDK, NDK and host tools
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: nova-horizon-arm64-fast
+
+      - name: Add swap for optimized native linking
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes python3 xz-utils zip
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "ndk;${ANDROID_NDK_VERSION}"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" >> "$GITHUB_ENV"
+          sudo swapoff -a || true
+          where=/mnt
+          available=$(df --output=avail -BG "$where" | tail -1 | tr -dc '0-9')
+          if [ "${available:-0}" -lt 30 ]; then where="$RUNNER_TEMP"; fi
+          sudo fallocate -l 10G "$where/nova-horizon-build.swap"
+          sudo chmod 600 "$where/nova-horizon-build.swap"
+          sudo mkswap "$where/nova-horizon-build.swap" >/dev/null
+          sudo swapon "$where/nova-horizon-build.swap"
+          free -h
 
-      - name: Fetch and verify Gradle wrapper
-        working-directory: ${{ runner.temp }}/horizon-android
+      - name: Build optimized Rust game and Android launcher
+        working-directory: ${{ runner.temp }}/starling
+        env:
+          PROFILE: fast
         run: |
           set -euo pipefail
-          jar=android/gradle/wrapper/gradle-wrapper.jar
-          curl -fsSL -o "$jar" https://raw.githubusercontent.com/gradle/gradle/v8.14.5/gradle/wrapper/gradle-wrapper.jar
-          echo "7d3a4ac4de1c32b59bc6a4eb8ecb8e612ccd0cf1ae1e99f66902da64df296172  $jar" | sha256sum -c -
+          python3 packaging/android/build_apk.py --abi arm64-v8a --profile fast
+          test -s target/android/NOVA-HORIZON-3.0.0-arm64-v8a.apk
 
-      - name: Build Horizon 26.3 ARM64 APK
-        working-directory: ${{ runner.temp }}/horizon-android
-        run: bash android/build.sh
-
-      - name: Verify the real game, Java helper and runtime are packaged
+      - name: Verify package, native engine, helpers and resource preparation kit
+        working-directory: ${{ runner.temp }}/starling
         run: |
           set -euo pipefail
-          APK=$(find "$RUNNER_TEMP/horizon-android/android/build" -maxdepth 1 -name 'horizon-*-android-arm64.apk' -type f -print -quit)
-          test -n "$APK"
-          test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "package: name='dev.nova.horizon'"
-          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libhorizon.so'
-          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libhorizonjava.so'
-          unzip -l "$APK" | grep -q 'assets/jre-25.zip'
-          unzip -l "$APK" | grep -q 'assets/horizon.zip'
-          mkdir -p nova-horizon/engine-output
-          cp "$APK" nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk
-          sha256sum nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk | tee nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk.sha256
+          APK=target/android/NOVA-HORIZON-3.0.0-arm64-v8a.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='dev.nova.horizon' versionCode='30000' versionName='3.0.0'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "application-label:'NOVA HORIZON'"
+          unzip -l "$APK" | grep -F 'lib/arm64-v8a/libhorizon_android.so'
+          unzip -l "$APK" | grep -F 'lib/arm64-v8a/libstarling_java.so'
+          unzip -l "$APK" | grep -F 'lib/arm64-v8a/libstarling_javac.so'
+          unzip -l "$APK" | grep -F 'assets/prepare-kit.zip'
+          unzip -l "$APK" | grep -F 'assets/lowbudget.zip'
+          unzip -l "$APK" | grep -F 'assets/StarlingVisuals.zip'
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          mkdir -p "$GITHUB_WORKSPACE/nova-horizon/engine-output"
+          cp "$APK" "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk"
+          sha256sum "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk" | tee "$GITHUB_WORKSPACE/nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk.sha256"
+          printf 'NOVA HORIZON 3.0.0\nEngine commit: %s\nBuild profile: fast\nABI: arm64-v8a\n' "$HORIZON_ANDROID_COMMIT" > "$GITHUB_WORKSPACE/nova-horizon/engine-output/build-info.txt"
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
@@ -103,5 +127,14 @@ jobs:
           path: |
             nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk
             nova-horizon/engine-output/NOVA-HORIZON-26.3-arm64.apk.sha256
+            nova-horizon/engine-output/build-info.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload native symbols for crash diagnosis
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-horizon-26.3-arm64-symbols
+          path: ${{ runner.temp }}/starling/target/android/libhorizon_android-symbols.so
           if-no-files-found: error
           retention-days: 30
