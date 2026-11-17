@@ -19,6 +19,11 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -203,27 +208,55 @@ internal object AssetBatchRunner {
         }
 
         var completed = 0L
-        for (index in 0 until objects.length()) {
-            currentCoroutineContext().ensureActive()
-            val item = objects.getJSONObject(index)
-            val requestForObject = OfficialArtifactRequest(
-                url = item.getString("url"),
-                sha1 = item.getString("hash"),
-                size = item.getLong("size"),
-                relativePath = item.getString("relativePath"),
-                displayName = request.versionId + " · ресурс " + (index + 1) + "/" + objects.length()
-            ).also { it.validate() }
+        val progressMutex = Mutex()
+        val parallelism = 4
 
-            OfficialArtifactDownloader.download(context, requestForObject) { downloaded, _, speed ->
-                onProgress((completed + downloaded).coerceAtMost(total), total, speed)
+        for (start in 0 until objects.length() step parallelism) {
+            currentCoroutineContext().ensureActive()
+            val endExclusive = minOf(start + parallelism, objects.length())
+            val batchBase = completed
+            val inFlight = ConcurrentHashMap<Int, Long>()
+            val speeds = ConcurrentHashMap<Int, Long>()
+            var batchBytes = 0L
+
+            for (index in start until endExclusive) {
+                batchBytes = Math.addExact(batchBytes, objects.getJSONObject(index).getLong("size"))
             }
-            completed = Math.addExact(completed, requestForObject.size)
+
+            coroutineScope {
+                (start until endExclusive).map { index ->
+                    async(Dispatchers.IO) {
+                        val item = objects.getJSONObject(index)
+                        val requestForObject = OfficialArtifactRequest(
+                            url = item.getString("url"),
+                            sha1 = item.getString("hash"),
+                            size = item.getLong("size"),
+                            relativePath = item.getString("relativePath"),
+                            displayName = request.versionId + " · ресурс " + (index + 1) + "/" + objects.length()
+                        ).also { it.validate() }
+
+                        OfficialArtifactDownloader.download(context, requestForObject) { downloaded, _, speed ->
+                            inFlight[index] = downloaded
+                            speeds[index] = speed
+                            progressMutex.withLock {
+                                val activeBytes = inFlight.values.sum()
+                                val aggregateSpeed = speeds.values.sum()
+                                onProgress((batchBase + activeBytes).coerceAtMost(total), total, aggregateSpeed)
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
+
+            completed = Math.addExact(completed, batchBytes)
             onProgress(completed, total, 0L)
         }
 
         if (completed != total) {
             throw IOException("Итоговый размер загруженных ресурсов не совпал с манифестом")
         }
+
+        AssetMaterializer.materialize(context, document)
         completed
     }
 }
@@ -312,11 +345,19 @@ internal object AssetBatchCoordinator {
                 .setEstimatedNetworkBytes(request.totalBytes, 0L)
                 .setExtras(request.toBundle())
                 .build()
-            val result = scheduler.schedule(job)
-            check(result == JobScheduler.RESULT_SUCCESS) {
-                "Android не принял пакетную загрузку ресурсов (код $result)"
+            try {
+                val result = scheduler.schedule(job)
+                check(result == JobScheduler.RESULT_SUCCESS) {
+                    "Android не принял пакетную загрузку ресурсов (код $result)"
+                }
+                jobHandle
+            } catch (failure: Exception) {
+                DownloadProgressStore.updateByHandle(
+                    context, jobHandle, "FAILED",
+                    failure.message ?: "Android отклонил пакетную загрузку"
+                )
+                throw failure
             }
-            jobHandle
         } else {
             val work = OneTimeWorkRequestBuilder<AssetBatchWorker>()
                 .setInputData(request.toWorkData())
@@ -330,12 +371,20 @@ internal object AssetBatchCoordinator {
                 context, request.progressPath, plan.versionId + " · игровые ресурсы",
                 request.totalBytes, workHandle
             )
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                "nova-assets-" + AssetBatchManifest.sha256(request.versionId).take(20),
-                ExistingWorkPolicy.KEEP,
-                work
-            )
-            workHandle
+            try {
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    "nova-assets-" + AssetBatchManifest.sha256(request.versionId).take(20),
+                    ExistingWorkPolicy.KEEP,
+                    work
+                )
+                workHandle
+            } catch (failure: Exception) {
+                DownloadProgressStore.updateByHandle(
+                    context, workHandle, "FAILED",
+                    failure.message ?: "WorkManager отклонил пакетную загрузку"
+                )
+                throw failure
+            }
         }
 
         return AssetBatchScheduleResult(
