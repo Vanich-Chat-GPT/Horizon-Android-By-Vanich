@@ -26,7 +26,6 @@ replacements = [
     ("'org.angelauramc.amethyst.scoped.gamefolder.debug'", "'dev.nova.horizon.scoped.gamefolder'"),
     ("'org.angelauramc.amethyst.scoped.controlfolder.debug'", "'dev.nova.horizon.scoped.controlfolder'"),
     ("'org.angelauramc.amethyst.scoped.gamefolder'", "'dev.nova.horizon.scoped.gamefolder'"),
-    ("'org.angelauramc.amethyst.scoped.controlfolder'", "'dev.nova.horizon.scoped.controlfolder'"),
 ]
 
 for old, new in replacements:
