@@ -49,7 +49,7 @@ jobs:
       - name: Install Android SDK and NDK
         run: |
           yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-37" "build-tools;36.0.0" "ndk;27.3.13750724"
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.3.13750724"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724" >> "$GITHUB_ENV"
 
       - uses: gradle/actions/setup-gradle@v4
