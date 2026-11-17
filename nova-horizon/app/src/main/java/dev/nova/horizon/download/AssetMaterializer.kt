@@ -108,6 +108,12 @@ internal object AssetMaterializer {
                     output.fd.sync()
                 }
             }
+            if (!temporary.isFile || temporary.length() != source.length() ||
+                hashFile(temporary) != hashFile(source)
+            ) {
+                temporary.delete()
+                throw IOException("Копия legacy-ресурса не прошла проверку целостности")
+            }
         }
 
         try {
