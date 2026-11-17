@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,12 +27,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -442,8 +446,18 @@ private fun VersionsScreen() {
 
 @Composable
 private fun SettingsScreen(darkTheme: Boolean, onThemeChanged: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    var controls by remember(context) {
+        mutableStateOf(TouchControlSettingsStore.read(context))
+    }
+
+    fun updateControls(next: TouchControlSettings) {
+        controls = next
+        TouchControlSettingsStore.save(context, next)
+    }
+
     Column(
-        Modifier.fillMaxSize().padding(22.dp),
+        Modifier.fillMaxSize().padding(22.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         Text("Настройки", fontSize = 26.sp, fontWeight = FontWeight.Bold)
@@ -454,16 +468,108 @@ private fun SettingsScreen(darkTheme: Boolean, onThemeChanged: (Boolean) -> Unit
         ) {
             Column(Modifier.weight(1f)) {
                 Text("Тёмная тема", fontWeight = FontWeight.SemiBold)
-                Text("Локальная настройка интерфейса", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(
+                    "Локальная настройка интерфейса",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
+                )
             }
             Switch(checked = darkTheme, onCheckedChange = onThemeChanged)
         }
+
         Card(shape = RoundedCornerShape(20.dp)) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Сенсорное управление", fontWeight = FontWeight.SemiBold)
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Сенсорное управление", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Включить сенсорные элементы", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Основной режим управления",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Switch(
+                        checked = controls.enabled,
+                        onCheckedChange = { updateControls(controls.copy(enabled = it)) }
+                    )
+                }
+
+                Text("Режим джойстика", fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = controls.joystickMode == JoystickMode.STATIC,
+                        onClick = {
+                            updateControls(controls.copy(joystickMode = JoystickMode.STATIC))
+                        },
+                        label = { Text("Статичный · по умолчанию") }
+                    )
+                    FilterChip(
+                        selected = controls.joystickMode == JoystickMode.FLOATING,
+                        onClick = {
+                            updateControls(controls.copy(joystickMode = JoystickMode.FLOATING))
+                        },
+                        label = { Text("Плавающий") }
+                    )
+                }
+
+                Text("Размер элементов: " + (controls.controlScale * 100).toInt() + "%")
+                Slider(
+                    value = controls.controlScale,
+                    onValueChange = { controls = controls.copy(controlScale = it) },
+                    onValueChangeFinished = { TouchControlSettingsStore.save(context, controls) },
+                    valueRange = 0.6f..1.4f
+                )
+
+                Text("Прозрачность: " + (controls.opacity * 100).toInt() + "%")
+                Slider(
+                    value = controls.opacity,
+                    onValueChange = { controls = controls.copy(opacity = it) },
+                    onValueChangeFinished = { TouchControlSettingsStore.save(context, controls) },
+                    valueRange = 0.3f..1.0f
+                )
+
+                Text("Чувствительность: " + String.format(java.util.Locale.ROOT, "%.1f×", controls.sensitivity))
+                Slider(
+                    value = controls.sensitivity,
+                    onValueChange = { controls = controls.copy(sensitivity = it) },
+                    onValueChangeFinished = { TouchControlSettingsStore.save(context, controls) },
+                    valueRange = 0.5f..2.0f
+                )
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Управление левой рукой", fontWeight = FontWeight.SemiBold)
+                    Switch(
+                        checked = controls.leftHanded,
+                        onCheckedChange = { updateControls(controls.copy(leftHanded = it)) }
+                    )
+                }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Показывать крестовину", fontWeight = FontWeight.SemiBold)
+                    Switch(
+                        checked = controls.showDpad,
+                        onCheckedChange = { updateControls(controls.copy(showDpad = it)) }
+                    )
+                }
                 Text(
-                    "Редактор джойстика и кнопок будет реализован вместе с настоящим игровым input bridge.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    "Параметры сохраняются на устройстве. Они будут переданы игровому вводу после подключения Java runtime и Android input bridge.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
                 )
             }
         }
