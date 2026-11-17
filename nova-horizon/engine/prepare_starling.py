@@ -76,7 +76,9 @@ def main() -> None:
                 raise SystemExit(f"{relative}: branding anchor not found: {old!r}")
             path.write_text(source.replace(old, new), encoding="utf-8")
 
-    print("Prepared NOVA HORIZON 3.0.0 from pinned Horizon/Starling Android source.")
+    ui_script = Path(__file__).resolve().parents[1] / "ui" / "integrate_launcher.py"
+    subprocess.run([sys.executable, str(ui_script), str(root)], check=True)
+    print("Prepared NOVA HORIZON 3.0.0: Rust 26.3, custom launcher, Russian defaults and Android UI.")
 
 if __name__ == "__main__":
     main()
