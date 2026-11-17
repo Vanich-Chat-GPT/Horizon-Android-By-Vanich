@@ -16,6 +16,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: nova-horizon-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   rust:
     name: Rust checks
