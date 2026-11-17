@@ -10,6 +10,7 @@ import com.microsoft.identity.client.IAuthenticationResult
 import com.microsoft.identity.client.IMultipleAccountPublicClientApplication
 import com.microsoft.identity.client.IPublicClientApplication
 import com.microsoft.identity.client.PublicClientApplication
+import com.microsoft.identity.client.SilentAuthenticationCallback
 import com.microsoft.identity.client.exception.MsalException
 import dev.nova.horizon.BuildConfig
 import dev.nova.horizon.R
@@ -131,7 +132,7 @@ internal object MicrosoftAuthManager {
                     .withScopes(scopes)
                     .forAccount(account)
                     .fromAuthority(account.authority)
-                    .withCallback(object : AuthenticationCallback {
+                    .withCallback(object : SilentAuthenticationCallback {
                         override fun onSuccess(authenticationResult: IAuthenticationResult) {
                             val token = authenticationResult.accessToken
                             if (token.isBlank()) {
@@ -143,10 +144,6 @@ internal object MicrosoftAuthManager {
 
                         override fun onError(exception: MsalException) {
                             callback(Result.failure(exception))
-                        }
-
-                        override fun onCancel() {
-                            callback(Result.failure(IllegalStateException("Тихое обновление Microsoft отменено.")))
                         }
                     })
                     .build()
