@@ -97,4 +97,35 @@ class OfficialArtifactRequestTest {
             valid(path = "versions/1.20.1/\u0000client.jar").validate()
         }
     }
+    @Test
+    fun acceptsOnlyCompleteRemainingRangeWhenResuming() {
+        OfficialArtifactDownloader.validateContentRange("bytes 512-1023/1024", 512L, 1024L)
+    }
+
+    @Test
+    fun rejectsTruncatedOrMismatchedResumeRanges() {
+        assertThrows(java.io.IOException::class.java) {
+            OfficialArtifactDownloader.validateContentRange("bytes 512-900/1024", 512L, 1024L)
+        }
+        assertThrows(java.io.IOException::class.java) {
+            OfficialArtifactDownloader.validateContentRange("bytes 511-1023/1024", 512L, 1024L)
+        }
+        assertThrows(java.io.IOException::class.java) {
+            OfficialArtifactDownloader.validateContentRange("bytes 512-1023/2048", 512L, 1024L)
+        }
+        assertThrows(java.io.IOException::class.java) {
+            OfficialArtifactDownloader.validateContentRange("bytes 0-1023/1024", 1024L, 1024L)
+        }
+    }
+
+    @Test
+    fun rejectsMalformedAndOverflowingResumeRanges() {
+        assertThrows(java.io.IOException::class.java) {
+            OfficialArtifactDownloader.validateContentRange("bytes nope-1023/1024", 512L, 1024L)
+        }
+        assertThrows(java.io.IOException::class.java) {
+            OfficialArtifactDownloader.validateContentRange("bytes 512-9223372036854775808/1024", 512L, 1024L)
+        }
+    }
+
 }
