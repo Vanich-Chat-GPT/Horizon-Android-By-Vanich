@@ -179,7 +179,8 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativePlanAssetIndex(
                         Err(error) => serde_json::json!({
                             "ok": false,
                             "error": format!("{:?}", error)
-                        }).to_string(),
+                        })
+                        .to_string(),
                     }
                 }
                 Err(_) => r#"{"ok":false,"error":"InvalidAssetIndexId"}"#.to_owned(),

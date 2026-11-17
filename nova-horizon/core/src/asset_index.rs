@@ -181,10 +181,19 @@ mod tests {
         assert_eq!(plan.objects.len(), 2);
         assert_eq!(plan.total_download_bytes, 15);
         assert!(plan.virtual_assets);
-        let shared = plan.objects.iter().find(|item| item.hash.starts_with('a')).unwrap();
+        let shared = plan
+            .objects
+            .iter()
+            .find(|item| item.hash.starts_with('a'))
+            .unwrap();
         assert_eq!(shared.logical_keys.len(), 2);
-        assert_eq!(shared.relative_path, format!("assets/objects/aa/{}", shared.hash));
-        assert!(shared.url.starts_with("https://resources.download.minecraft.net/aa/"));
+        assert_eq!(
+            shared.relative_path,
+            format!("assets/objects/aa/{}", shared.hash)
+        );
+        assert!(shared
+            .url
+            .starts_with("https://resources.download.minecraft.net/aa/"));
     }
 
     #[test]
