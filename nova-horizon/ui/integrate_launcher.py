@@ -202,6 +202,150 @@ def main() -> None:
         "                    &area_lbl,",
     )
 
+    # The Redmi Pad SE 8.7 has a 90 Hz panel. Keep near-field image quality intact,
+    # cap at the panel rate, and spend the quality/performance trade-off on far terrain.
+    graphics = root / "crates/horizon-client-render/src/graphics.rs"
+    old_mobile = """/// A phone's first start: settings for its tier instead of the desktop's (measured on a
+/// Snapdragon 8 Gen 2 at 3200x1440; slower tiers scaled down from it).
+///
+/// The frame cap is 60: a steady 60 runs cooler than 70 to 90 that dips, and the display
+/// follows the cap. Mobs think on the render thread, so the simulation distance stays short:
+/// at 12 the ticks of a few hundred mobs made every third frame late. Clouds cost the GPU
+/// 1.7 ms of a frame at any distance, fancy leaves are overdraw on tiled GPUs, and animated
+/// textures are mixed on the CPU each frame.
+pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::settings::Settings) {
+    use crate::system_stats::Tier;
+    let high = tier == Tier::High;
+    // A fast phone is not held at 60 frames: an uncapped frame rate lets its display run at its
+    // own rate, and the frame cap stays the player's choice (Options, or `maxFps`).
+    s.max_fps = if high { 260 } else { 60 };
+    s.render_distance = match tier {
+        Tier::High => 10,
+        Tier::Mid => 8,
+        Tier::Low => 6,
+    };
+    s.simulation_distance = if high { 8 } else { 6 };
+    s.clouds = if high { "fast" } else { "false" }.into();
+    s.particles = if high { 1 } else { 2 };
+    s.entity_shadows = high;
+    s.biome_blend = if high { 1 } else { 0 };
+    s.mipmap_levels = if high { 4 } else { 2 };
+    s.entity_distance = match tier {
+        Tier::High => 1.0,
+        Tier::Mid => 0.75,
+        Tier::Low => 0.5,
+    };
+    s.cutout_leaves = high;
+    s.weather_radius = if high { 5 } else { 3 };
+    // Bedrock's touch default: the stick walks up a block without the jump button.
+    s.auto_jump = true;
+    s.graphics_preset = "custom".into();
+    let g = &mut s.horizon;
+    g.preset = Preset::Custom;
+    g.resolution_scale = match tier {
+        Tier::High => 100,
+        Tier::Mid => 85,
+        Tier::Low => 70,
+    };
+    g.animated_textures = tier != Tier::Low;
+    // A phone's GPU is an integrated one, which far terrain slows most.
+    g.far_detail = if high {
+        FarDetail::Full
+    } else {
+        FarDetail::Reduced
+    };
+    // VSync is what holds a fast phone at its display's rate and hides the frame rate the GPU
+    // can make: off by default, as the frame cap already keeps the GPU from running flat out.
+    s.vsync = false;
+}"""
+    new_mobile = """/// Mobile defaults tuned for NOVA HORIZON: 90 FPS ceiling, full-resolution near
+/// terrain and normal vanilla effects. Lower tiers trade only far-terrain detail and
+/// simulation/render distance, rather than blurring the whole frame or disabling effects.
+pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::settings::Settings) {
+    use crate::system_stats::Tier;
+    let high = tier == Tier::High;
+    s.max_fps = 90;
+    s.render_distance = match tier {
+        Tier::High => 12,
+        Tier::Mid => 10,
+        Tier::Low => 8,
+    };
+    s.simulation_distance = if high { 8 } else { 6 };
+    s.clouds = "true".into();
+    s.particles = 0;
+    s.entity_shadows = true;
+    s.biome_blend = 2;
+    s.mipmap_levels = 4;
+    s.entity_distance = 1.0;
+    s.cutout_leaves = true;
+    s.weather_radius = 10;
+    // Bedrock's touch default: the stick walks up a block without the jump button.
+    s.auto_jump = true;
+    s.graphics_preset = "custom".into();
+    let g = &mut s.horizon;
+    g.preset = Preset::Custom;
+    g.resolution_scale = 100;
+    g.animated_textures = true;
+    g.far_detail = if high {
+        FarDetail::Full
+    } else {
+        FarDetail::Reduced
+    };
+    // Let the 90 FPS cap govern frame pacing rather than double-throttling with VSync.
+    s.vsync = false;
+}"""
+    replace_once(graphics, old_mobile, new_mobile)
+    old_test = """    #[test]
+    fn phones_start_lighter_by_tier() {
+        use crate::system_stats::Tier;
+        let mut low = crate::settings::Settings::default();
+        apply_mobile_defaults(Tier::Low, &mut low);
+        let mut high = crate::settings::Settings::default();
+        apply_mobile_defaults(Tier::High, &mut high);
+        assert_eq!((low.max_fps, high.max_fps), (60, 260));
+        assert!(low.render_distance < high.render_distance);
+        assert_eq!(
+            (low.clouds.as_str(), high.clouds.as_str()),
+            ("false", "fast")
+        );
+        assert!(low.horizon.resolution_scale < high.horizon.resolution_scale);
+        assert!(!low.horizon.animated_textures && high.horizon.animated_textures);
+        // Auto-Jump on, as on Bedrock's touch screens.
+        assert!(low.auto_jump && high.auto_jump);
+        // What the options screens read back.
+        let file = high.to_file();
+        let back = crate::settings::Settings::from_file(file);
+        assert_eq!(back.render_distance, 10);
+        assert!(back.auto_jump);
+    }"""
+    new_test = """    #[test]
+    fn mobile_defaults_keep_nearby_quality_and_cap_at_90_fps() {
+        use crate::system_stats::Tier;
+        let mut low = crate::settings::Settings::default();
+        apply_mobile_defaults(Tier::Low, &mut low);
+        let mut high = crate::settings::Settings::default();
+        apply_mobile_defaults(Tier::High, &mut high);
+        assert_eq!((low.max_fps, high.max_fps), (90, 90));
+        assert_eq!((low.render_distance, high.render_distance), (8, 12));
+        assert_eq!((low.clouds.as_str(), high.clouds.as_str()), ("true", "true"));
+        assert_eq!((low.horizon.resolution_scale, high.horizon.resolution_scale), (100, 100));
+        assert!(low.horizon.animated_textures && high.horizon.animated_textures);
+        assert_eq!(low.particles, 0);
+        assert!(low.entity_shadows && low.cutout_leaves);
+        assert_eq!(low.mipmap_levels, 4);
+        assert_eq!(low.horizon.far_detail, FarDetail::Reduced);
+        assert_eq!(high.horizon.far_detail, FarDetail::Full);
+        // Auto-Jump on, as on Bedrock's touch screens.
+        assert!(low.auto_jump && high.auto_jump);
+        // What the options screens read back.
+        let file = high.to_file();
+        let back = crate::settings::Settings::from_file(file);
+        assert_eq!(back.render_distance, 12);
+        assert_eq!(back.max_fps, 90);
+        assert!(back.auto_jump);
+    }"""
+    replace_once(graphics, old_test, new_test)
+
     add_translations(
         root / "crates/horizon-client/assets/horizon/lang/en_us.json",
         {
