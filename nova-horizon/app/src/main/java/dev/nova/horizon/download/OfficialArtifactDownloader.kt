@@ -152,10 +152,10 @@ internal object OfficialArtifactDownloader {
                         currentCoroutineContext().ensureActive()
                         val read = input.read(buffer)
                         if (read < 0) break
-                        downloaded += read
-                        if (downloaded > request.size) {
+                        if (read.toLong() > request.size - downloaded) {
                             throw IOException("Сервер передал больше байт, чем заявлено в метаданных")
                         }
+                        downloaded += read.toLong()
                         output.write(buffer, 0, read)
                         digest.update(buffer, 0, read)
 
@@ -247,13 +247,18 @@ internal object OfficialArtifactDownloader {
         }
     }
 
-    private fun validateContentRange(value: String?, expectedStart: Long, expectedTotal: Long) {
+    internal fun validateContentRange(value: String?, expectedStart: Long, expectedTotal: Long) {
         val match = Regex("^bytes (\\d+)-(\\d+)/(\\d+)$").matchEntire(value ?: "")
             ?: throw IOException("Некорректный Content-Range при возобновлении")
-        val start = match.groupValues[1].toLong()
-        val end = match.groupValues[2].toLong()
-        val total = match.groupValues[3].toLong()
-        if (start != expectedStart || end < start || total != expectedTotal || end >= total) {
+        val start = match.groupValues[1].toLongOrNull()
+            ?: throw IOException("Некорректное начало Content-Range")
+        val end = match.groupValues[2].toLongOrNull()
+            ?: throw IOException("Некорректный конец Content-Range")
+        val total = match.groupValues[3].toLongOrNull()
+            ?: throw IOException("Некорректный общий размер Content-Range")
+        if (expectedTotal <= 0L || expectedStart < 0L || expectedStart >= expectedTotal ||
+            start != expectedStart || end != expectedTotal - 1L || total != expectedTotal
+        ) {
             throw IOException("Content-Range не совпадает с ожидаемым диапазоном")
         }
     }
