@@ -1,0 +1,90 @@
+name: NOVA HORIZON — game runtime ARM64
+
+on:
+  push:
+    branches:
+      - "nova-horizon/**"
+    paths:
+      - "nova-horizon/engine/**"
+      - ".github/workflows/nova-horizon-game-engine.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nova-horizon-game-engine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-game-engine:
+    name: Build NOVA HORIZON with Android Java runtime and game renderer
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      AMETHYST_COMMIT: 166af615dbdca1a507b8c2d379822cca02795132
+    steps:
+      - name: Checkout NOVA HORIZON integration
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned Android game engine and native submodules
+        run: |
+          set -euo pipefail
+          git clone https://github.com/AngelAuraMC/Amethyst-Android.git "$RUNNER_TEMP/amethyst"
+          git -C "$RUNNER_TEMP/amethyst" checkout --detach "$AMETHYST_COMMIT"
+          git -C "$RUNNER_TEMP/amethyst" submodule update --init --recursive
+          test "$(git -C "$RUNNER_TEMP/amethyst" rev-parse HEAD)" = "$AMETHYST_COMMIT"
+
+      - name: Prepare NOVA HORIZON branding and application identity
+        run: |
+          python3 nova-horizon/engine/prepare_amethyst.py "$RUNNER_TEMP/amethyst"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+
+      - name: Install Android SDK and NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-37" "build-tools;36.0.0" "ndk;27.3.13750724"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724" >> "$GITHUB_ENV"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+          gradle-version: "9.6.1"
+
+      - name: Generate launcher language list
+        working-directory: ${{ runner.temp }}/amethyst
+        run: |
+          chmod +x scripts/languagelist_updater.sh
+          bash scripts/languagelist_updater.sh
+
+      - name: Build ARM64-capable game launcher
+        working-directory: ${{ runner.temp }}/amethyst
+        run: gradle :app_pojavlauncher:assembleDebug --no-daemon
+
+      - name: Verify package identity and native engine
+        run: |
+          set -euo pipefail
+          APK="$RUNNER_TEMP/amethyst/app_pojavlauncher/build/outputs/apk/debug/app_pojavlauncher-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "package: name='dev.nova.horizon'"
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/'
+          mkdir -p nova-horizon/engine-output
+          cp "$APK" nova-horizon/engine-output/NOVA-HORIZON-arm64-debug.apk
+          sha256sum nova-horizon/engine-output/NOVA-HORIZON-arm64-debug.apk | tee nova-horizon/engine-output/NOVA-HORIZON-arm64-debug.apk.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nova-horizon-game-arm64-debug
+          path: |
+            nova-horizon/engine-output/NOVA-HORIZON-arm64-debug.apk
+            nova-horizon/engine-output/NOVA-HORIZON-arm64-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
