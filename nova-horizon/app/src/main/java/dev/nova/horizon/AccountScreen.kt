@@ -48,9 +48,10 @@ internal fun AccountScreen() {
         if (activity != null) activity.runOnUiThread(action) else action()
     }
 
-    LaunchedEffect(account.isSignedIn, session?.expiresAtMillis) {
+    val currentSession = session
+    LaunchedEffect(account.isSignedIn, currentSession?.expiresAtMillis) {
         if (account.isSignedIn &&
-            (session == null || !session.isValid()) &&
+            (currentSession == null || !currentSession.isValid()) &&
             MicrosoftAuthManager.isConfigured()
         ) {
             busy = true
