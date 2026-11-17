@@ -321,7 +321,7 @@ def main() -> None:
         "starling.controls.joystick_mid_bottom_left": "Слева внизу",
         "starling.controls.joystick_right_side": "Правая сторона",
     })
-    ru_path.write_text(json.dumps(merged_ru, ensure_ascii=False, indent=2) + "\\n", encoding="utf-8")
+    ru_path.write_text(json.dumps(merged_ru, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     # Android system notifications, file handling and diagnostics have native Russian resources too.
     values_ru = android / "res/values-ru"
