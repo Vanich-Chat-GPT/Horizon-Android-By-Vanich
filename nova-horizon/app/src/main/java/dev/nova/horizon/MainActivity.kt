@@ -159,7 +159,7 @@ private fun HomeScreen(onDiagnostics: () -> Unit) {
                     Text("ИГРОВАЯ СРЕДА", color = MaterialTheme.colorScheme.secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Text("Пока не подключена", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "JVM, графический мост и проверенный запуск Minecraft ещё находятся в разработке. Кнопка запуска появится только после реальной интеграции.",
+                        "Официальный каталог, план установки, проверка asset index и пакетная загрузка ресурсов уже подготовлены. Для настоящего запуска ещё нужны совместимая Java SE JVM, Android-мост LWJGL/GLFW, графика, звук и ввод с проверкой на устройстве.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text("Версия NOVA: 0.1.0-dev", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -177,10 +177,13 @@ private fun HomeScreen(onDiagnostics: () -> Unit) {
                     StatusLine("Android оболочка", "Подготовлена")
                     StatusLine("Rust Core / JNI", "Подготовлен")
                     StatusLine("Проба OpenGL ES", "Подключена")
-                    StatusLine("Каталог версий", "Проверяется официально")
-                    StatusLine("Загрузка игровых файлов", "Ещё не реализована")
-                    StatusLine("Авторизация Microsoft", "Ещё не реализована")
-                    StatusLine("Офлайн-запуск игры", "Ещё не реализован")
+                    StatusLine("Каталог версий Mojang", "Подключён")
+                    StatusLine("План установки / SHA-1", "Подготовлен")
+                    StatusLine("Пакетная загрузка ресурсов", "Реализована")
+                    StatusLine("Microsoft / Xbox / XSTS", "Код готов; нужна регистрация приложения")
+                    StatusLine("Сенсорные настройки", "Сохраняются локально")
+                    StatusLine("Java SE runtime / LWJGL", "В разработке")
+                    StatusLine("Проверенный запуск / офлайн", "Ещё не реализован")
                 }
             }
         }
