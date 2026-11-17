@@ -47,8 +47,7 @@ pub enum InstallPlanError {
 pub fn build_android_install_plan(
     metadata: &VersionMetadata,
 ) -> Result<AndroidInstallPlan, InstallPlanError> {
-    if !valid_relative_path(&format!("versions/{0}/{0}.jar", metadata.id))
-        || metadata.id.is_empty()
+    if !valid_relative_path(&format!("versions/{0}/{0}.jar", metadata.id)) || metadata.id.is_empty()
     {
         return Err(InstallPlanError::InvalidVersionId);
     }
@@ -100,7 +99,8 @@ pub fn build_android_install_plan(
             if !issues.iter().any(|issue| issue.library == library.name) {
                 issues.push(PlanIssue {
                     library: library.name.clone(),
-                    reason: "Правила Mojang не разрешили эту библиотеку для профиля Android ARM64".to_owned(),
+                    reason: "Правила Mojang не разрешили эту библиотеку для профиля Android ARM64"
+                        .to_owned(),
                 });
             }
             continue;
@@ -111,10 +111,7 @@ pub fn build_android_install_plan(
             .as_ref()
             .and_then(|downloads| downloads.artifact.as_ref())
         {
-            let path = artifact
-                .path
-                .clone()
-                .or_else(|| url_path(&artifact.url));
+            let path = artifact.path.clone().or_else(|| url_path(&artifact.url));
             match path {
                 Some(path) if valid_relative_path(&path) => {
                     libraries.push(PlannedArtifact {
@@ -127,7 +124,8 @@ pub fn build_android_install_plan(
                 }
                 _ => issues.push(PlanIssue {
                     library: library.name.clone(),
-                    reason: "Не удалось безопасно определить относительный путь JAR-файла".to_owned(),
+                    reason: "Не удалось безопасно определить относительный путь JAR-файла"
+                        .to_owned(),
                 }),
             }
         } else {
@@ -366,7 +364,7 @@ mod tests {
     fn reports_native_classifiers_instead_of_selecting_desktop_binary() {
         let json = BASE.replace(
             "\"name\":\"com.mojang:brigadier:1.1.8\",",
-            "\"name\":\"com.mojang:brigadier:1.1.8\",\"natives\":{\"linux\":\"natives-linux\"},"
+            "\"name\":\"com.mojang:brigadier:1.1.8\",\"natives\":{\"linux\":\"natives-linux\"},",
         );
         let plan = build_android_install_plan(&parse(&json)).unwrap();
         assert_eq!(plan.libraries.len(), 1);

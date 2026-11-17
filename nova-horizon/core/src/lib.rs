@@ -71,8 +71,10 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeInspectVersionMe
                     let expected_id: String = expected.into();
                     match version_metadata::VersionMetadata::parse(&payload, &expected_id) {
                         Ok(metadata) => {
-                            let java_major =
-                                metadata.java_version.as_ref().map(|runtime| runtime.major_version);
+                            let java_major = metadata
+                                .java_version
+                                .as_ref()
+                                .map(|runtime| runtime.major_version);
                             let asset_index_id =
                                 metadata.asset_index.as_ref().map(|index| index.id.clone());
                             let client_size =
@@ -125,18 +127,16 @@ pub extern "system" fn Java_dev_nova_horizon_NativeBridge_nativeBuildInstallPlan
                 Ok(expected) => {
                     let expected_id: String = expected.into();
                     match version_metadata::VersionMetadata::parse(&payload, &expected_id) {
-                        Ok(metadata) => {
-                            match install_plan::build_android_install_plan(&metadata) {
-                                Ok(plan) => serde_json::to_string(&plan).unwrap_or_else(|_| {
-                                    "{\"ok\":false,\"error\":\"SerializeFailed\"}".to_owned()
-                                }),
-                                Err(error) => serde_json::json!({
-                                    "ok": false,
-                                    "error": format!("{:?}", error)
-                                })
-                                .to_string(),
-                            }
-                        }
+                        Ok(metadata) => match install_plan::build_android_install_plan(&metadata) {
+                            Ok(plan) => serde_json::to_string(&plan).unwrap_or_else(|_| {
+                                "{\"ok\":false,\"error\":\"SerializeFailed\"}".to_owned()
+                            }),
+                            Err(error) => serde_json::json!({
+                                "ok": false,
+                                "error": format!("{:?}", error)
+                            })
+                            .to_string(),
+                        },
                         Err(error) => serde_json::json!({
                             "ok": false,
                             "error": format!("{:?}", error)
