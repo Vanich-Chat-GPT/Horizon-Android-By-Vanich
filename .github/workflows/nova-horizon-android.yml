@@ -78,6 +78,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: nova-horizon-arm64-fast
+          workspaces: ${{ runner.temp }}/starling -> target
 
       - name: Add swap for optimized native linking
         run: |
