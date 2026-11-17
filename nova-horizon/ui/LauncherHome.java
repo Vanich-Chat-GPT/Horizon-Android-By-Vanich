@@ -214,7 +214,7 @@ final class LauncherHome {
         LinearLayout tabs = new LinearLayout(a);
         tabs.setGravity(Gravity.CENTER_VERTICAL);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
-        String[] labels = {"Экземпляры", "Все", "Недавние", "Vanilla", "Модифицированные"};
+        String[] labels = {"Экземпляры", "Все", "Недавние", "Vanilla", "Модифицированные", "Скриншоты"};
         for (int i = 0; i < labels.length; i++) {
             TextView tab = text(a, labels[i], 11, i == 0 ? ORANGE : MUTED, i == 0);
             tab.setPadding(dp(a, 11), dp(a, 11), dp(a, 11), dp(a, 11));
@@ -223,11 +223,16 @@ final class LauncherHome {
         tabsScroll.addView(tabs);
         row.addView(tabsScroll, new LinearLayout.LayoutParams(0, -1, 1f));
 
-        TextView settings = smallButton(a, "⚙");
-        settings.setOnClickListener(v -> actions.settings());
+        TextView folder = smallButton(a, "▱");
+        folder.setOnClickListener(v -> actions.pick("all"));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(dp(a, 42), dp(a, 42));
         p.leftMargin = dp(a, 8);
-        row.addView(settings, p);
+        row.addView(folder, p);
+        TextView settings = smallButton(a, "⚙");
+        settings.setOnClickListener(v -> actions.settings());
+        LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(dp(a, 42), dp(a, 42));
+        settingsParams.leftMargin = dp(a, 8);
+        row.addView(settings, settingsParams);
         return row;
     }
 
