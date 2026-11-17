@@ -58,11 +58,12 @@ final class LauncherHome {
         scroll.setClipToPadding(false);
         scroll.setVerticalScrollBarEnabled(false);
         root.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+        root.addView(sideRail(activity, actions), new FrameLayout.LayoutParams(dp(activity, 56), -1, Gravity.LEFT));
 
         LinearLayout page = new LinearLayout(activity);
         page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(activity, 18), dp(activity, 14), dp(activity, 18), dp(activity, 14));
-        scroll.addView(page, new ScrollView.LayoutParams(-1, -2));
+        page.setPadding(dp(activity, 70), dp(activity, 14), dp(activity, 18), dp(activity, 14));
+        scroll.addView(page, new FrameLayout.LayoutParams(-1, -2));
 
         page.addView(header(activity, actions), new LinearLayout.LayoutParams(-1, dp(activity, 58)));
         addGap(activity, page, 18);
@@ -94,7 +95,7 @@ final class LauncherHome {
         TextView engine = text(activity, "Horizon Rust  •  ARM64", 11, MUTED, false);
         TextView play = actionButton(activity, "▶   ИГРАТЬ", ORANGE, 0xFF15121B);
         play.setOnClickListener(v -> actions.play());
-        TextView launchSettings = text(activity, "Настройки запуска  ⚙", 12, WHITE, true);
+        TextView launchSettings = text(activity, "Настройки в игре  ⚙", 12, WHITE, true);
         launchSettings.setGravity(Gravity.CENTER);
         launchSettings.setPadding(0, dp(activity, 13), 0, dp(activity, 2));
         launchSettings.setOnClickListener(v -> actions.settings());
@@ -155,6 +156,38 @@ final class LauncherHome {
         disclaimer.setGravity(Gravity.CENTER);
         page.addView(disclaimer, new LinearLayout.LayoutParams(-1, dp(activity, 26)));
         return root;
+    }
+
+    private static LinearLayout sideRail(Activity a, Actions actions) {
+        LinearLayout rail = new LinearLayout(a);
+        rail.setOrientation(LinearLayout.VERTICAL);
+        rail.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        rail.setPadding(dp(a, 7), dp(a, 18), dp(a, 7), dp(a, 12));
+        rail.setBackgroundColor(0xC9080B16);
+        String[] glyphs = {"⌂", "◇", "✦", "⇩", "▥", "ⓘ"};
+        Runnable[] tasks = {
+            () -> {},
+            actions::info,
+            () -> actions.pick("mods"),
+            actions::play,
+            actions::diagnostics,
+            actions::info
+        };
+        for (int i = 0; i < glyphs.length; i++) {
+            final int index = i;
+            TextView icon = text(a, glyphs[i], 23, i == 0 ? ORANGE : MUTED, true);
+            icon.setGravity(Gravity.CENTER);
+            GradientDrawable shape = new GradientDrawable();
+            shape.setColor(i == 0 ? 0x443B2915 : 0x00000000);
+            shape.setCornerRadius(dp(a, 12));
+            icon.setBackground(shape);
+            icon.setClickable(true);
+            icon.setFocusable(true);
+            icon.setOnClickListener(v -> tasks[index].run());
+            rail.addView(icon, new LinearLayout.LayoutParams(dp(a, 42), dp(a, 48)));
+            addGap(a, rail, 7);
+        }
+        return rail;
     }
 
     private static View header(Activity a, Actions actions) {
