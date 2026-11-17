@@ -14,7 +14,7 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [x] Real EGL/OpenGL ES context probe
 - [x] Android ABI, CPU, memory and thermal diagnostics
 - [x] ARM64 debug CI build definition
-- [x] First successful end-to-end Android ARM64 APK CI run (GitHub-hosted runner; not physical device)
+- [x] Successful end-to-end Android ARM64 debug APK CI build (GitHub-hosted runner; not physical device)
 
 ## Phase 1 — device and graphics capability inventory
 - [x] CPU ABI and logical core inventory
@@ -34,11 +34,14 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [x] Resumable HTTP Range transfers guarded by strong ETag / If-Range
 - [x] Private staging, fsync and atomic file promotion
 - [x] Android 14+ user-initiated transfer job and older Android WorkManager fallback
-- [ ] Installer plan for client JAR, libraries, asset index and asset objects
+- [x] Conservative client JAR, ordinary library JAR and asset-index install plan
+- [x] Asset-index validation and deduplicated asset-object expansion
+- [x] Bounded-concurrency asset batch transfer with resumable, SHA-1-verified objects
+- [x] Legacy virtual-assets/resources materialization using hard links or verified copies
+- [x] Download scheduling connected to the version UI and gated by Java entitlement
 - [ ] End-to-end downloader tests against controlled HTTP range/ETag server
-- [ ] Connect validated version metadata to user-facing download controls
-- [ ] Microsoft OAuth authorization-code flow with PKCE
-- [ ] Keystore-backed token storage
+- [ ] Complete platform-native classifier resolution for Android/Bionic
+- [ ] Keystore-backed token storage audit
 - [ ] Offline launcher state machine
 
 ## Phase 3 — Java runtime research and integration
@@ -49,9 +52,10 @@ Status is evidence-based. A checked item means code and automated checks exist; 
 - [ ] No launch button until end-to-end runtime tests pass
 
 ## Phase 4 — game integration
-- [ ] Official game file installation
+- [ ] Official game file installation validation on device
 - [ ] Version-specific launch configuration
 - [ ] Rendering and input integration
+- [ ] Audio integration
 - [ ] World save and resume validation
 - [ ] Touch controls and external input
 - [ ] Resource packs and compatible mod-loader handling
