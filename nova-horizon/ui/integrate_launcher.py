@@ -196,6 +196,11 @@ def main() -> None:
         '                    "Joystick Active Zone",',
         '                    &crate::lang::get("starling.controls.joystick_mode"),',
     )
+    replace_once(
+        control_ui,
+        "                    area_lbl,",
+        "                    &area_lbl,",
+    )
 
     add_translations(
         root / "crates/horizon-client/assets/horizon/lang/en_us.json",
