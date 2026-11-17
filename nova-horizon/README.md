@@ -1,41 +1,54 @@
 # NOVA HORIZON
 
-Android-сборка **Horizon — Minecraft: Java Edition 26.3, переписанного на Rust**. Это не Java-лаунчер для старых версий Minecraft и не Pojav/Amethyst.
+**NOVA HORIZON 3** — неофициальная Android-сборка Horizon, Minecraft: Java Edition 26.3, переписанного на Rust. Игровой цикл и рендерер нативные; это не запуск обычного Java-клиента через Pojav/Amethyst.
 
-## Реальная игровая основа
+## Игровая основа и Android-порт
 
-- Android-порт: [MocLG/horizon-android](https://github.com/MocLG/horizon-android)
-- Игровой Rust-проект: [horizon-rust/horizon](https://github.com/horizon-rust/horizon)
-- Зафиксированный upstream commit Android-порта: `1788803beebf105abe58de72752d08a5f0e0ee76`
-- Игра собирается как нативная ARM64-библиотека `libhorizon.so`; Java 25 используется только для подготовки ресурсов, а не как игровой движок.
-- Графический backend Android-порта требует Vulkan 1.1 и Android 10+.
-- В APK должны присутствовать Rust-игра, Android Java helper, JRE 25 и подготовочные ресурсы.
+- Horizon: [horizon-rust/horizon](https://github.com/horizon-rust/horizon) — Rust-реализация Minecraft Java 26.3.
+- Android-порт и развитая мобильная оболочка: [scpao5/starling](https://github.com/scpao5/starling), продолжение Android-порта Horizon.
+- Закреплённый upstream commit: `50e0ef409738310524e18f77aa8ee6c4378987ed`.
+- Vulkan/wgpu rendering, NativeActivity, Android audio/input bridge, экранные контролы и редактор раскладки.
+- Android diagnostics: логи, сведения о завершении процесса, экспорт отчёта и CPU/GPU/frame profiling.
+- Установка и подготовка ресурсов из собственной копии Minecraft 26.3; игровых файлов Mojang в APK нет.
 
-## Сборка NOVA HORIZON
+## NOVA HORIZON identity
 
-CI клонирует закреплённую версию настоящего Android-порта, применяет узкий брендинг-патч (название приложения, package ID и endpoint обновлений), затем выполняет upstream `android/build.sh`.
-
-- ABI: `arm64-v8a`
 - Package ID: `dev.nova.horizon`
-- Название приложения: `NOVA HORIZON`
-- Целевая игра: Minecraft Java Edition 26.3, Rust Horizon
-- Результат CI: `NOVA-HORIZON-26.3-arm64.apk` и SHA-256
-- Сборка CI подписывается временным debug-ключом и предназначена для установки и проверки; это пока не постоянная release-подпись.
+- App label: `NOVA HORIZON`
+- Version: `3.0.0`
+- ABI: `arm64-v8a`
+- Build profile: Cargo `fast` (оптимизированная сборка для распространения и измерений)
+- APK: `NOVA-HORIZON-26.3-arm64.apk`
 
-Сборка запускается workflow **NOVA HORIZON — Horizon Rust 26.3 Android**. Проверка упаковки подтверждает наличие Rust game library, Java helper, JRE и игровых подготовочных ресурсов. Она сама по себе не заменяет запуск на физическом планшете.
+Сборка изменяет package/JNI namespace, launcher branding и версию, сохраняя upstream игровой код и лицензионные файлы. Тестовая APK подписывается стабильным публичным тестовым ключом upstream, а не приватным production-ключом. Поэтому это тестовая сборка, не финальная защищённая release-подпись.
 
-## Установка игры
+## Запуск игры
 
-Для загрузки Minecraft 26.3 требуется собственная легально приобретённая копия Minecraft: Java Edition и вход через Microsoft-аккаунт, владеющий игрой. Сам Horizon не содержит игровые бинарные файлы, текстуры или звуки Mojang.
+Нужна собственная легально приобретённая копия Minecraft: Java Edition 26.3 и Microsoft-аккаунт, владеющий Java Edition, для загрузки официальных файлов Mojang. APK не включает клиент, сервер, текстуры, звуки или другие проприетарные игровые данные.
 
-## Совместимость устройства
+После установки: войти в аккаунт, дать лаунчеру подготовить ресурсы и нажать Play. Первичная подготовка занимает время; оставь приложение открытым до её завершения.
 
-Целевое устройство проекта — Redmi Pad SE 8.7 (MediaTek Helio G85 / Mali-G52 MC2, ARM64, Android 16). Важна фактическая поддержка Vulkan 1.1 драйвером устройства: наличие ARM64 само по себе этого не гарантирует. До проверки APK на самом планшете совместимость и FPS не объявляются подтверждёнными.
+## Производительность и совместимость
+
+Android-порт требует ARM64, Android 8+ и Vulkan. Успешная сборка APK не доказывает, что конкретный GPU-драйвер устройства работает без ошибок.
+
+Профиль `fast` включает оптимизированную компиляцию Rust. В игровом коде уже есть отдельные worker threads, обработка входящих chunk packets с бюджетом времени кадра и лимиты загрузки мешей. В Android Diagnostics есть измерения frame time, CPU/GPU, памяти, температуры и очередей. Это исходная база для реальной оптимизации, а не обещание фиксированных 90 FPS.
+
+Цель настройки на Redmi Pad SE 8.7 — стабильная частота кадров без искусственного ограничения RAM и без снижения качества ближней картинки. Изменения дальних чанков допускаются отдельно. FPS, нагрев, память и загрузка чанков нужно измерить на самом планшете; результаты с других GPU не переносятся напрямую.
+
+## Что ещё требует проверки
+
+- Установка и первый запуск на Redmi Pad SE 8.7.
+- Вход Microsoft и получение официальных игровых файлов.
+- Создание/загрузка мира, сохранение и повторный запуск.
+- Touch controls, клавиатура/IME, звук, сворачивание/возврат.
+- Vulkan driver stability, frame pacing, thermal throttling и память.
+- Проверка обновления APK поверх предыдущей сборки и сохранения миров.
 
 ## Разработка
 
-`nova-horizon/app` и `nova-horizon/core` содержат раннюю самостоятельную оболочку/экспериментальный Rust-модуль из предыдущего прототипа. Они не являются игровым движком Horizon 26.3 и не используются новым Android workflow. Рабочая игровая основа берётся из закреплённого upstream-проекта; дальнейшие изменения лаунчера и оптимизации нужно переносить именно в этот слой.
+Workflow **NOVA HORIZON — Rust 26.3 Android ARM64** клонирует закреплённый upstream commit, применяет branding/JNI patch, собирает оптимизированный ARM64 APK и проверяет package ID, native library, Android helpers, preparation kit, alignment и APK signature. Crash symbols загружаются отдельным CI artifact.
 
 ## Лицензии и атрибуция
 
-NOVA HORIZON — неофициальная сборка. Android-порт и Horizon распространяются по лицензиям исходных проектов; OpenJDK runtime имеет отдельные лицензионные условия. Mojang и Microsoft не связаны с проектом. См. `THIRD_PARTY_NOTICES.md`.
+Android-порт Starling и игровой проект Horizon распространяются по MIT; сторонние компоненты сохраняют собственные лицензии. NOVA HORIZON не связан с Mojang или Microsoft. См. `THIRD_PARTY_NOTICES.md`.
