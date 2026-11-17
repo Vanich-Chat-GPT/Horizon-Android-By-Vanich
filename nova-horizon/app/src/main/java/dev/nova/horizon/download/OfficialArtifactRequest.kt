@@ -101,10 +101,45 @@ internal data class DownloadHandle(val value: String)
 internal object DownloadCoordinator {
     fun enqueue(context: Context, request: OfficialArtifactRequest): DownloadHandle {
         request.validate()
+
+        val active = DownloadProgressStore.all(context).firstOrNull {
+            it.path == request.relativePath &&
+                (it.state == "QUEUED" || it.state == "RUNNING" || it.state == "RETRYING") &&
+                it.handle.isNotBlank()
+        }
+        if (active != null) return DownloadHandle(active.handle)
+
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            DownloadHandle("job:" + enqueueUserInitiated(context, request))
+            val jobId = stableJobId(request.relativePath)
+            val handle = "job:" + jobId
+            DownloadProgressStore.enqueue(context, request, handle)
+            try {
+                enqueueUserInitiated(context, request, jobId)
+                DownloadHandle(handle)
+            } catch (failure: Exception) {
+                DownloadProgressStore.updateByHandle(
+                    context, handle, "FAILED", failure.message ?: "Android отклонил загрузку"
+                )
+                throw failure
+            }
         } else {
-            DownloadHandle("work:" + enqueueWorkManager(context, request))
+            val work = buildWorkRequest(request)
+            val handle = "work:" + work.id
+            DownloadProgressStore.enqueue(context, request, handle)
+            try {
+                val stable = stableKey(request.relativePath)
+                WorkManager.getInstance(context).enqueueUniqueWork(
+                    "nova-artifact-" + stable,
+                    ExistingWorkPolicy.KEEP,
+                    work
+                )
+                DownloadHandle(handle)
+            } catch (failure: Exception) {
+                DownloadProgressStore.updateByHandle(
+                    context, handle, "FAILED", failure.message ?: "WorkManager отклонил загрузку"
+                )
+                throw failure
+            }
         }
     }
 
@@ -121,31 +156,22 @@ internal object DownloadCoordinator {
                 WorkManager.getInstance(context).cancelWorkById(UUID.fromString(id))
             }
         }
+        DownloadProgressStore.updateByHandle(context, handle.value, "CANCELLED")
     }
 
-    private fun enqueueWorkManager(context: Context, request: OfficialArtifactRequest): UUID {
-        val stable = stableKey(request.relativePath)
-        val work = OneTimeWorkRequestBuilder<OfficialArtifactDownloadWorker>()
+    private fun buildWorkRequest(request: OfficialArtifactRequest) =
+        OneTimeWorkRequestBuilder<OfficialArtifactDownloadWorker>()
             .setInputData(request.toWorkData())
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
             )
-            .addTag("nova-artifact-" + stable)
+            .addTag("nova-artifact-" + stableKey(request.relativePath))
             .build()
 
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "nova-artifact-" + stable,
-            ExistingWorkPolicy.KEEP,
-            work
-        )
-        return work.id
-    }
-
-    private fun enqueueUserInitiated(context: Context, request: OfficialArtifactRequest): Int {
+    private fun enqueueUserInitiated(context: Context, request: OfficialArtifactRequest, jobId: Int) {
         val scheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
-        val jobId = stableJobId(request.relativePath)
         val job = JobInfo.Builder(
             jobId,
             ComponentName(context, ArtifactDownloadJobService::class.java)
@@ -160,7 +186,6 @@ internal object DownloadCoordinator {
         check(result == JobScheduler.RESULT_SUCCESS) {
             "Android не принял пользовательскую задачу загрузки (код " + result + ")"
         }
-        return jobId
     }
 
     private fun stableKey(path: String): String =

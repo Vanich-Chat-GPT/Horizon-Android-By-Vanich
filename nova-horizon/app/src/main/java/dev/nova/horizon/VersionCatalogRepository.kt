@@ -163,11 +163,11 @@ internal object VersionCatalogRepository {
         )
 
         val planJson = JSONObject(NativeBridge.buildInstallPlan(json, version.id))
-        if (!planJson.optBoolean("versionId") && !planJson.has("versionId")) {
-            throw SecurityException("Rust Core не вернул план установки версии")
-        }
         if (planJson.has("ok") && !planJson.optBoolean("ok")) {
             throw SecurityException("План установки отклонён: " + planJson.optString("error"))
+        }
+        if (!planJson.has("versionId")) {
+            throw SecurityException("Rust Core не вернул план установки версии")
         }
 
         val librariesJson = planJson.getJSONArray("libraries")

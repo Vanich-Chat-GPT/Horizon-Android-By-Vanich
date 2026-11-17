@@ -81,8 +81,12 @@ internal class OfficialArtifactDownloadWorker(
         DownloadNotifications.ensureChannel(manager)
 
         return try {
+            DownloadProgressStore.update(applicationContext, request, "RUNNING", downloadedBytes = 0L)
             setForeground(foreground(notificationId, request.displayName, 0L, request.size, 0L))
             val result = OfficialArtifactDownloader.download(applicationContext, request) { downloaded, total, speed ->
+                DownloadProgressStore.update(
+                    applicationContext, request, "RUNNING", downloaded, speed
+                )
                 setProgress(
                     workDataOf(
                         "downloaded" to downloaded,
@@ -92,6 +96,9 @@ internal class OfficialArtifactDownloadWorker(
                 )
                 setForeground(foreground(notificationId, request.displayName, downloaded, total, speed))
             }
+            DownloadProgressStore.update(
+                applicationContext, request, "COMPLETE", request.size, 0L, ""
+            )
             Result.success(
                 workDataOf(
                     "path" to result.file.absolutePath,
@@ -100,11 +107,21 @@ internal class OfficialArtifactDownloadWorker(
                 )
             )
         } catch (cancelled: CancellationException) {
+            DownloadProgressStore.update(applicationContext, request, "CANCELLED")
             throw cancelled
         } catch (io: IOException) {
-            if (runAttemptCount < 4) Result.retry()
+            val retrying = runAttemptCount < 4
+            DownloadProgressStore.update(
+                applicationContext, request, if (retrying) "RETRYING" else "FAILED",
+                error = io.message ?: "Ошибка сети/хранилища"
+            )
+            if (retrying) Result.retry()
             else Result.failure(workDataOf("error" to (io.message ?: "Ошибка сети/хранилища")))
         } catch (failure: Exception) {
+            DownloadProgressStore.update(
+                applicationContext, request, "FAILED",
+                error = failure.message ?: "Ошибка проверки файла"
+            )
             Result.failure(workDataOf("error" to (failure.message ?: "Ошибка проверки файла")))
         }
     }
@@ -149,9 +166,13 @@ internal class ArtifactDownloadJobService : JobService() {
             JOB_END_NOTIFICATION_POLICY_DETACH
         )
 
+        DownloadProgressStore.update(this, request, "RUNNING", downloadedBytes = 0L)
         val task = scope.launch {
             try {
-                OfficialArtifactDownloader.download(this@ArtifactDownloadJobService, request) { downloaded, total, speed ->
+                val result = OfficialArtifactDownloader.download(this@ArtifactDownloadJobService, request) { downloaded, total, speed ->
+                    DownloadProgressStore.update(
+                        this@ArtifactDownloadJobService, request, "RUNNING", downloaded, speed
+                    )
                     withContext(Dispatchers.Main.immediate) {
                         setNotification(
                             parameters,
@@ -163,12 +184,21 @@ internal class ArtifactDownloadJobService : JobService() {
                         )
                     }
                 }
+                DownloadProgressStore.update(
+                    this@ArtifactDownloadJobService, request, "COMPLETE", result.downloadedBytes, 0L, ""
+                )
                 manager.cancel(parameters.jobId)
                 jobFinished(parameters, false)
             } catch (cancelled: CancellationException) {
                 // onStopJob owns the rescheduling decision.
                 throw cancelled
             } catch (failure: Exception) {
+                DownloadProgressStore.update(
+                    this@ArtifactDownloadJobService,
+                    request,
+                    if (failure is IOException) "RETRYING" else "FAILED",
+                    error = failure.message ?: "Ошибка загрузки"
+                )
                 manager.cancel(parameters.jobId)
                 jobFinished(parameters, failure is IOException)
             } finally {
@@ -199,12 +229,16 @@ internal class ArtifactDownloadJobService : JobService() {
 
     override fun onStopJob(parameters: JobParameters): Boolean {
         activeJobs.remove(parameters.jobId)?.cancel()
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            parameters.stopReason != JobParameters.STOP_REASON_USER &&
-                parameters.stopReason != JobParameters.STOP_REASON_CANCELLED_BY_APP
-        } else {
-            true
+        val handle = "job:" + parameters.jobId
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            (parameters.stopReason == JobParameters.STOP_REASON_USER ||
+                parameters.stopReason == JobParameters.STOP_REASON_CANCELLED_BY_APP)
+        ) {
+            DownloadProgressStore.updateByHandle(this, handle, "CANCELLED")
+            return false
         }
+        DownloadProgressStore.updateByHandle(this, handle, "QUEUED")
+        return true
     }
 
     override fun onDestroy() {
@@ -219,6 +253,7 @@ internal class CancelArtifactJobReceiver : BroadcastReceiver() {
         val jobId = intent.getIntExtra(EXTRA_JOB_ID, -1)
         if (jobId > 0) {
             (context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler).cancel(jobId)
+            DownloadProgressStore.updateByHandle(context, "job:" + jobId, "CANCELLED")
         }
     }
 

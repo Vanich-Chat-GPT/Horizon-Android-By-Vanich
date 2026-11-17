@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import dev.nova.horizon.account.MinecraftAccountStore
+import dev.nova.horizon.download.DownloadPlanScheduler
 import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
@@ -62,6 +64,8 @@ class MainActivity : ComponentActivity() {
 private enum class NovaScreen(val title: String, val glyph: String) {
     HOME("Главная", "⌂"),
     VERSIONS("Версии", "▤"),
+    DOWNLOADS("Загрузки", "↓"),
+    ACCOUNT("Аккаунт", "♙"),
     SETTINGS("Настройки", "⚙"),
     DIAGNOSTICS("Диагностика", "⌁")
 }
@@ -113,6 +117,8 @@ private fun NovaApp() {
                 when (selected) {
                     NovaScreen.HOME -> HomeScreen(onDiagnostics = { selected = NovaScreen.DIAGNOSTICS })
                     NovaScreen.VERSIONS -> VersionsScreen()
+                    NovaScreen.DOWNLOADS -> DownloadsScreen()
+                    NovaScreen.ACCOUNT -> AccountScreen()
                     NovaScreen.SETTINGS -> SettingsScreen(
                         darkTheme = darkTheme,
                         onThemeChanged = {
@@ -211,6 +217,9 @@ private fun VersionsScreen() {
     var inspectingId by remember { mutableStateOf<String?>(null) }
     var inspection by remember { mutableStateOf<VersionInspection?>(null) }
     var metadataError by remember { mutableStateOf<String?>(null) }
+    var downloadMessage by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val account = remember(context) { MinecraftAccountStore.read(context) }
 
     val worker = remember {
         Executors.newSingleThreadExecutor { task ->
@@ -234,7 +243,7 @@ private fun VersionsScreen() {
     ) {
         Text("Версии Minecraft", fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text(
-            "Каталог берётся с официального сервера Mojang и проверяется Rust Core. Выбор версии пока проверяет только её метаданные — игровые файлы не скачиваются.",
+            "Каталог берётся с официального сервера Mojang. Выбор версии проверяет её метаданные и формирует консервативный план установки для Android ARM64.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp
         )
@@ -321,6 +330,34 @@ private fun VersionsScreen() {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
+                    Button(
+                        enabled = account.hasJavaEntitlement,
+                        onClick = {
+                            val result = runCatching {
+                                DownloadPlanScheduler.enqueue(context, plan)
+                            }
+                            downloadMessage = result.fold(
+                                onSuccess = {
+                                    "В очередь добавлено файлов: " + it.totalArtifacts +
+                                        " · общий размер: " + formatBytes(it.totalBytes)
+                                },
+                                onFailure = { it.message ?: "Не удалось поставить файлы в очередь" }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Скачать подготовительные файлы")
+                    }
+                    if (!account.hasJavaEntitlement) {
+                        Text(
+                            "Для скачивания Minecraft сначала требуется подтверждённый вход Microsoft и право на Java Edition.",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+                    downloadMessage?.let {
+                        Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    }
                     plan.issues.take(8).forEach { issue ->
                         Text(
                             "• " + issue.library + ": " + issue.reason,
