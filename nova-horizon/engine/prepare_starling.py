@@ -78,6 +78,17 @@ def main() -> None:
 
     ui_script = Path(__file__).resolve().parents[1] / "ui" / "integrate_launcher.py"
     subprocess.run([sys.executable, str(ui_script), str(root)], check=True)
+
+    # The pinned Android document provider references a nonexistent GameFolder.context field.
+    # DocumentsProvider.getContext() is already the supported source of this context.
+    provider = root / "packaging/android/java/dev/nova/horizon/GameFolderProvider.java"
+    if not provider.exists():
+        provider = root / "packaging/android/java/io/github/juanluci/starling/GameFolderProvider.java"
+    replace_once(
+        provider,
+        "        GameFolder.context = context;\\n",
+        "",
+    )
     print("Prepared NOVA HORIZON 3.0.0: Rust 26.3, custom launcher, Russian defaults and Android UI.")
 
 if __name__ == "__main__":
