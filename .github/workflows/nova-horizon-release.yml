@@ -1,0 +1,107 @@
+name: NOVA HORIZON — signed ARM64 release build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Build and verify signed ARM64 APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+
+      - name: Install Android SDK platform, build tools and NDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;30.0.16248370"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
+
+      - name: Validate secrets, install signing key and derive MSAL redirect hash
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD_INPUT: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS_INPUT: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD_INPUT: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          MICROSOFT_CLIENT_ID_INPUT: ${{ secrets.MICROSOFT_CLIENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$KEYSTORE_PASSWORD_INPUT" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS_INPUT" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
+          test -n "$KEY_PASSWORD_INPUT" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
+          test -n "$MICROSOFT_CLIENT_ID_INPUT" || { echo "Missing MICROSOFT_CLIENT_ID"; exit 1; }
+
+          KEYSTORE_PATH="$RUNNER_TEMP/nova-horizon-release.jks"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+
+          SIGNATURE_HASH="$(keytool -exportcert -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS_INPUT" -storepass "$KEYSTORE_PASSWORD_INPUT" | openssl dgst -sha1 -binary | openssl base64 -A)"
+          test -n "$SIGNATURE_HASH"
+
+          {
+            echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH"
+            echo "ANDROID_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD_INPUT"
+            echo "ANDROID_KEY_ALIAS=$KEY_ALIAS_INPUT"
+            echo "ANDROID_KEY_PASSWORD=$KEY_PASSWORD_INPUT"
+            echo "MICROSOFT_CLIENT_ID=$MICROSOFT_CLIENT_ID_INPUT"
+            echo "MICROSOFT_REDIRECT_SIGNATURE_HASH=$SIGNATURE_HASH"
+          } >> "$GITHUB_ENV"
+
+          echo "Derived MSAL redirect URI: msauth://dev.nova.horizon/$SIGNATURE_HASH"
+          echo "Register this exact redirect URI in the Microsoft public-client app registration."
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: nova-horizon/core
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Build Rust ARM64 library
+        working-directory: nova-horizon/core
+        run: cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Run Android unit tests and assemble signed release
+        working-directory: nova-horizon
+        run: |
+          gradle testDebugUnitTest assembleRelease --no-daemon
+
+      - name: Verify package, ARM64 ABI and APK signature
+        run: |
+          set -euo pipefail
+          APK="nova-horizon/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -q "package: name='dev.nova.horizon'"
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libnova_core.so'
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
+          sha256sum "$APK" | tee "$APK.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nova-horizon-arm64-signed-release
+          path: |
+            nova-horizon/app/build/outputs/apk/release/app-release.apk
+            nova-horizon/app/build/outputs/apk/release/app-release.apk.sha256
+          if-no-files-found: error
+          retention-days: 30

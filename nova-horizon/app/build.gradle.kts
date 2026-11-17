@@ -16,6 +16,12 @@ val microsoftRedirectHash = providers.gradleProperty("MICROSOFT_REDIRECT_SIGNATU
     .trim()
 val authConfigured = microsoftClientId.isNotBlank() && microsoftRedirectHash.isNotBlank()
 val msalResDirectory = layout.buildDirectory.dir("generated/msalConfig/res")
+val releaseKeystorePath = providers.environmentVariable("ANDROID_KEYSTORE_PATH").orElse("").get()
+val releaseStorePassword = providers.environmentVariable("ANDROID_KEYSTORE_PASSWORD").orElse("").get()
+val releaseKeyAlias = providers.environmentVariable("ANDROID_KEY_ALIAS").orElse("").get()
+val releaseKeyPassword = providers.environmentVariable("ANDROID_KEY_PASSWORD").orElse("").get()
+val releaseSigningConfigured = releaseKeystorePath.isNotBlank() &&
+    releaseStorePassword.isNotBlank() && releaseKeyAlias.isNotBlank() && releaseKeyPassword.isNotBlank()
 
 android {
     namespace = "dev.nova.horizon"
@@ -51,6 +57,26 @@ android {
     }
 
     sourceSets.getByName("main").res.srcDir(msalResDirectory)
+
+    signingConfigs {
+        create("release") {
+            if (releaseSigningConfigured) {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
 
     packaging {
         jniLibs {
