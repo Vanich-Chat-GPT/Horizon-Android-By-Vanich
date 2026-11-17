@@ -626,6 +626,14 @@ pub fn apply_mobile_defaults(tier: crate::system_stats::Tier, s: &mut crate::set
     }"""
     replace_once(graphics, old_test, new_test)
 
+    # The inserted regression test must follow Settings.touch.joystick_style.
+    # Assert exactly one replacement so upstream schema drift fails loudly, not silently.
+    replace_once(
+        graphics,
+        "            low.joystick_style.move_area,",
+        "            low.touch.joystick_style.move_area,",
+    )
+
     add_translations(
         root / "crates/horizon-client/assets/horizon/lang/en_us.json",
         {
