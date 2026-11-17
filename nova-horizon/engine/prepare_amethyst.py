@@ -15,6 +15,7 @@ text = gradle_file.read_text(encoding="utf-8")
 
 replacements = [
     ('String semVer = "1.1.7"', 'String semVer = "3.0.0"'),
+    ('compileSdk = 37', 'compileSdk = 36'),
     ('applicationId "org.angelauramc.amethyst"', 'applicationId "dev.nova.horizon"'),
     ("            applicationIdSuffix '.debug'\n", ""),
     ('resValue "string", "app_name", "Amethyst (Debug)"', 'resValue "string", "app_name", "NOVA HORIZON"'),
